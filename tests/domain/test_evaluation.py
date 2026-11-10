@@ -24,6 +24,24 @@ class StrKind(str):
     pass
 
 
+class SignalSubclass(Signal):
+    pass
+
+
+class SignalTuple(tuple[Signal, ...]):
+    pass
+
+
+class SnapshotSubclass(Snapshot):
+    pass
+
+
+# Payload and Parameters are `@final` for mypy only; at run time they can be subclassed. Their constructor is guarded,
+# so an instance of a subclass is made with `object.__new__`, which is enough to reach the exact-type checks.
+PayloadSubclass = type("PayloadSubclass", (Payload,), {})
+ParametersSubclass = type("ParametersSubclass", (Parameters,), {})
+
+
 def make_signal(kind: str = "k", **payload: Any) -> Signal:
     return Signal(kind, Payload.of(payload))
 
@@ -59,6 +77,16 @@ def test_signals_must_be_a_non_empty_tuple_of_signals() -> None:
     assert Signals((make_signal(),)).signals == (make_signal(),)
 
 
+def test_signals_rejects_subclasses_of_tuple_and_signal() -> None:
+    signal = make_signal()
+    with pytest.raises(ValueError, match="tuple"):
+        Signals(cast(Any, SignalTuple((signal,))))
+    with pytest.raises(ValueError, match="Signal"):
+        Signals((SignalSubclass("k", Payload.of()),))
+    with pytest.raises(ValueError, match="Signal"):
+        Signals((signal, SignalSubclass("k", Payload.of())))
+
+
 def test_signals_keep_the_strategys_order() -> None:
     first = make_signal("z")
     second = make_signal("a")
@@ -77,6 +105,13 @@ def test_signal_requires_a_non_empty_str_kind(kind: Any) -> None:
 def test_signal_requires_exactly_a_payload(payload: Any) -> None:
     with pytest.raises(ValueError, match="payload"):
         Signal("k", payload)
+
+
+def test_signal_rejects_a_payload_subclass() -> None:
+    instance: object = object.__new__(PayloadSubclass)
+    assert isinstance(instance, Payload)
+    with pytest.raises(ValueError, match="payload"):
+        Signal("k", cast(Any, instance))
 
 
 def test_signal_accepts_an_empty_payload_and_keeps_both_fields() -> None:
@@ -143,6 +178,17 @@ def test_context_requires_exactly_a_snapshot(snapshot: Any) -> None:
 
 @pytest.mark.parametrize("parameters", [{}, {"n": 1}, None, Payload.of(), [("n", 1)]], ids=repr)
 def test_context_requires_exactly_parameters(parameters: Any) -> None:
+    with pytest.raises(ValueError, match="parameters"):
+        make_context(parameters=parameters)
+
+
+def test_context_rejects_subclasses_of_snapshot_and_parameters() -> None:
+    snapshot = SnapshotSubclass(())
+    assert isinstance(snapshot, Snapshot)
+    with pytest.raises(ValueError, match="snapshot"):
+        make_context(snapshot=snapshot)
+    parameters: object = object.__new__(ParametersSubclass)
+    assert isinstance(parameters, Parameters)
     with pytest.raises(ValueError, match="parameters"):
         make_context(parameters=parameters)
 

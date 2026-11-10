@@ -24,7 +24,13 @@ def _require_decimal(value: object, name: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class Candle:
-    """One candle as Quasar sends it. The five numbers are exact, finite `Decimal`; `turnover` may also be `None`."""
+    """One candle as Quasar sends it. The five numbers are exact, finite `Decimal`; `turnover` may also be `None`.
+
+    `==` and `hash` compare `Decimal` VALUES, not text: `Decimal("1.0") == Decimal("1.00")` and
+    `Decimal("-0") == Decimal("0")` hold, so two candles that differ only in trailing zeros or the sign of zero are
+    equal. This differs from `Payload` and `Signal`, which compare canonical text. A caller that needs the exact text
+    of a number checks it with `Decimal.as_tuple()` (sign, digits, exponent); nothing here normalizes or rounds.
+    """
 
     open_time_ms: EpochMs
     open: Decimal
@@ -50,7 +56,10 @@ class Candle:
 
 @dataclass(frozen=True, slots=True)
 class CandleSeries:
-    """The candles of one timeframe, a `tuple` strictly ascending by `open_time_ms`. Build unsorted input with `of`."""
+    """The candles of one timeframe, a `tuple` strictly ascending by `open_time_ms`. Build unsorted input with `of`.
+
+    Equality follows `Candle`: `Decimal` values, not exact text.
+    """
 
     timeframe_ms: DurationMs
     candles: tuple[Candle, ...]
@@ -88,7 +97,10 @@ def _open_time(candle: Candle) -> EpochMs:
 
 @dataclass(frozen=True, slots=True)
 class Snapshot:
-    """The series known at one evaluation, a `tuple` strictly ascending by `timeframe_ms`. Build with `of`."""
+    """The series known at one evaluation, a `tuple` strictly ascending by `timeframe_ms`. Build with `of`.
+
+    Equality follows `Candle`: `Decimal` values, not exact text.
+    """
 
     series: tuple[CandleSeries, ...]
 

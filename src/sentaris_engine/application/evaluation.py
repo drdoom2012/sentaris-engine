@@ -33,6 +33,9 @@ def evaluate_strategy(strategy: StatelessStrategy, context: EvaluationContext) -
     Raises `StrategyContractError` if `strategy.id` or `strategy.version` is not an exact non-empty `str`, or if the
     outcome is not exactly a `Signals`, a `NoSignal` or an `EvaluationFailure`. An exception raised by the strategy
     propagates. A non-result is never read as "no signal" (DR-14).
+
+    A strategy object without an `id` or `version` attribute raises `AttributeError` from the attribute read, not
+    `StrategyContractError`; mypy catches that statically through `StatelessStrategy`.
     """
     _require_identity(strategy.id, "id")
     _require_identity(strategy.version, "version")

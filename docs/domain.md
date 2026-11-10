@@ -128,7 +128,7 @@ Missing, stale or inconsistent data is an explicit evaluation failure, never a s
 
 | ID | Rule | Enforcement |
 |---|---|---|
-| DR-14 | A strategy's result type distinguishes "no signal" from "could not evaluate" (a failure with a machine-readable reason). Failure is not modelled as "no signal", `None`, or an exception swallowed upstream. | ENFORCED: the result type distinguishes signals, no signal and failure, and a non-result is never read as "no signal" (`tests/application/test_evaluate_strategy.py::test_non_result_is_contract_error`) | |
+| DR-14 | A strategy's result type distinguishes "no signal" from "could not evaluate" (a failure with a machine-readable reason). Failure is not modelled as "no signal", `None`, or an exception swallowed upstream. | ENFORCED: the result type distinguishes signals, no signal and failure, and a non-result is never read as "no signal" (`tests/application/test_evaluate_strategy.py::test_non_result_is_contract_error`); an exception raised by a strategy is not swallowed upstream (`tests/application/test_evaluate_strategy.py::test_strategy_exception_is_not_swallowed`) |
 | DR-15 | Candles, prices, volumes, open interest, funding and indicator values are never filled, interpolated, forward-filled, defaulted or fabricated. | PLANNED (unscheduled) |
 | DR-16 | Before evaluating, validate: required series present, enough history, no gaps, not stale relative to `as_of`, consistent across series. The thresholds are open (OD-8). | PLANNED (unscheduled) |
 | DR-17 | Validation is never weakened to make a test or a signal pass. | NOT_APPLICABLE: review convention, no automated mechanism |

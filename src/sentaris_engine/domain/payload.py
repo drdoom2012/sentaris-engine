@@ -23,13 +23,14 @@ type PayloadValue = None | bool | int | str | Decimal | tuple[PayloadValue, ...]
 class Payload(Mapping[str, PayloadValue]):
     """Immutable mapping of payload values; equal exactly when the canonical forms are equal.
 
-    Build it with `Payload.of`. Keys iterate in code-point order.
+    Build it with `Payload.of`. Keys iterate in code-point order. A lookup is a binary search over the sorted key
+    tuple, so no mutable lookup structure is reachable from a payload.
     """
 
-    __slots__ = ("_canonical", "_index", "_items")
+    __slots__ = ("_canonical", "_items", "_keys")
 
     _items: tuple[tuple[str, PayloadValue], ...]
-    _index: dict[str, PayloadValue]
+    _keys: tuple[str, ...]
     _canonical: bytes | None
 
     def __init__(self, *args: object, **kwargs: object) -> None:
@@ -77,7 +78,18 @@ class Payload(Mapping[str, PayloadValue]):
         return cast(bytes, self._canonical)
 
     def __getitem__(self, key: str) -> PayloadValue:
-        return self._index[key]
+        if isinstance(key, str):
+            keys = self._keys
+            low, high = 0, len(keys)
+            while low < high:  # binary search for the first key not below `key`; the keys are sorted, never mutable
+                middle = (low + high) // 2
+                if keys[middle] < key:
+                    low = middle + 1
+                else:
+                    high = middle
+            if low < len(keys) and keys[low] == key:
+                return self._items[low][1]
+        raise KeyError(key)
 
     def __iter__(self) -> Iterator[str]:
         return (key for key, _ in self._items)
@@ -114,7 +126,7 @@ def _new_payload(entries: list[tuple[str, PayloadValue]]) -> Payload:
     entries.sort(key=lambda entry: entry[0])
     payload = object.__new__(Payload)
     object.__setattr__(payload, "_items", tuple(entries))
-    object.__setattr__(payload, "_index", dict(entries))
+    object.__setattr__(payload, "_keys", tuple(key for key, _ in entries))
     object.__setattr__(payload, "_canonical", None)
     return payload
 

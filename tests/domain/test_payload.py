@@ -208,3 +208,156 @@ def test_of_accepts_typed_dicts_and_pairs_under_strict_mypy() -> None:
     assert Payload.of(closes).canonical() == b'{"$map":{"a":{"$decimal":"1.0"}}}'
     assert Payload.of(counts) == Payload.of(pairs)
     assert Payload.of(lists).canonical() == b'{"$map":{"a":[1,2]}}'
+
+
+def _all_slot_values(payload: Payload) -> list[tuple[str, object]]:
+    return [(name, getattr(payload, name)) for name in Payload.__slots__ if hasattr(payload, name)]
+
+
+def test_no_mutable_lookup_structure_is_reachable() -> None:
+    payload = Payload.of({"a": 1, "b": [1, {"c": 2}], "d": {"e": None}})
+    payload.canonical()
+    assert not hasattr(payload, "__dict__")
+    assert not hasattr(payload, "_index")
+    for name, value in _all_slot_values(payload):
+        assert type(value) not in (dict, list, set, bytearray), name
+    inner = payload["d"]
+    assert type(inner) is Payload
+    for name, value in _all_slot_values(inner):
+        assert type(value) not in (dict, list, set, bytearray), name
+    # Nothing writable is left to change a lookup behind the payload's back.
+    with pytest.raises(AttributeError):
+        cast(Any, payload)._items = ()
+    with pytest.raises(AttributeError):
+        cast(Any, payload)._keys = ()
+    with pytest.raises(AttributeError):
+        cast(Any, payload)._index = {"a": 999}
+    assert payload["a"] == 1
+    assert dict(payload)["a"] == 1
+
+
+def _text(*code_points: int) -> str:
+    # `chr` rather than literal escapes: `ruff format` rewrites printable escapes into literal non-ASCII text.
+    return "".join(chr(point) for point in code_points)
+
+
+_A, _E_ACUTE, _CJK, _EMOJI = 0x61, 0xE9, 0x4E2D, 0x1F600
+_LOOKUP_POINTS: list[tuple[int, ...]] = [
+    (),
+    (_A,),
+    (_A, _A),
+    (_A, _A, _A),
+    (_A, 0x62),
+    (_A, 0x62, 0x63),
+    (0x62,),
+    (0x62, _A),
+    (_E_ACUTE,),
+    (_E_ACUTE, _E_ACUTE),
+    (0x65,),
+    (0x65, 0x301),
+    (0xFF,),
+    (0x100,),
+    (_CJK,),
+    (_CJK, 0x6587),
+    (0xD7FF,),
+    (0xE000,),
+    (0xFFFF,),
+    (0x10000,),
+    (_EMOJI,),
+    (_EMOJI, _A),
+    (0,),
+    (0, 0),
+]
+
+
+_LOOKUP_KEYS = [_text(*points) for points in _LOOKUP_POINTS]
+
+
+def test_lookup_keys_are_the_intended_ascii_escapes() -> None:
+    assert [ascii(key) for key in _LOOKUP_KEYS[8:10]] == ["'\\xe9'", "'\\xe9\\xe9'"]
+    assert ascii(_LOOKUP_KEYS[14]) == "'\\u4e2d'"
+    assert ascii(_LOOKUP_KEYS[19]) == "'\\U00010000'"
+    assert ascii(_LOOKUP_KEYS[21]) == "'\\U0001f600a'"
+    assert len(set(_LOOKUP_KEYS)) == len(_LOOKUP_KEYS)
+
+
+def test_lookup_finds_every_key_and_only_those() -> None:
+    entries = [(key, index) for index, key in enumerate(_LOOKUP_KEYS)]
+    for rotation in (0, 5, 11):
+        rotated = entries[rotation:] + entries[:rotation]
+        payload = Payload.of(rotated)
+        for key, index in entries:
+            assert payload[key] == index
+            assert key in payload
+            assert payload.get(key) == index
+        assert list(payload) == sorted(_LOOKUP_KEYS)
+        assert list(payload.items()) == sorted(entries)
+        assert list(payload.values()) == [index for _, index in sorted(entries)]
+        assert list(payload.keys()) == sorted(_LOOKUP_KEYS)
+        assert len(payload) == len(entries)
+    absent = ["\x01", "aaaa", "abcd", "b\x00", "bb", "c", _text(0xEA), _text(_E_ACUTE, _A), _text(0x4E2E)]
+    absent += [_text(0x1F601), _text(0x10FFFF)]
+    for key in absent:
+        assert key not in payload, ascii(key)
+        assert payload.get(key) is None
+        with pytest.raises(KeyError):
+            payload[key]
+    for bad in (1, None, b"a", ("a",)):
+        with pytest.raises(KeyError):
+            payload[cast(Any, bad)]
+        assert cast(Any, bad) not in payload
+
+
+def test_lookup_in_a_large_payload_and_in_the_empty_payload() -> None:
+    size = 2000
+    payload = Payload.of({f"k{number}": number for number in range(size)})
+    assert all(payload[f"k{number}"] == number for number in range(size))
+    assert "k" not in payload and f"k{size}" not in payload and "k0\x00" not in payload
+    assert len(Payload.of()) == 0 and "a" not in Payload.of()
+    with pytest.raises(KeyError):
+        Payload.of()["a"]
+
+
+class _CountingKey(str):
+    """A str that counts the comparisons made against it, to prove a lookup is a binary search."""
+
+    comparisons = 0
+
+    def _count(self) -> None:
+        type(self).comparisons += 1
+
+    def __lt__(self, other: str) -> bool:
+        self._count()
+        return str.__lt__(self, other)
+
+    def __gt__(self, other: str) -> bool:
+        self._count()
+        return str.__gt__(self, other)
+
+    def __le__(self, other: str) -> bool:
+        self._count()
+        return str.__le__(self, other)
+
+    def __ge__(self, other: str) -> bool:
+        self._count()
+        return str.__ge__(self, other)
+
+    def __eq__(self, other: object) -> bool:
+        self._count()
+        return str.__eq__(self, other)
+
+    def __ne__(self, other: object) -> bool:
+        self._count()
+        return str.__ne__(self, other)
+
+    __hash__ = str.__hash__
+
+
+def test_lookup_makes_a_logarithmic_number_of_comparisons() -> None:
+    size = 100_000
+    payload = Payload.of({f"{number:06d}": number for number in range(size)})
+    for probe, found in (("000000", True), ("049999", True), ("099999", True), ("050000x", False), ("zzzzzz", False)):
+        _CountingKey.comparisons = 0
+        key = _CountingKey(probe)
+        assert (payload.get(key) is not None) is found
+        assert _CountingKey.comparisons <= 2 * size.bit_length(), (probe, _CountingKey.comparisons)

@@ -16,8 +16,14 @@ _ENTRIES: list[tuple[str, Callable[[], Any]]] = [(name, build) for name, build, 
 def _run_child(args: list[str], seed: str) -> list[str]:
     # `-P` keeps the working directory off `sys.path`; `-I` is not used because it would ignore PYTHONHASHSEED.
     result = subprocess.run(
-        [sys.executable, "-P", *args], env={"PYTHONHASHSEED": seed}, check=True, capture_output=True, text=True
+        [sys.executable, "-P", *args],
+        env={"PYTHONHASHSEED": seed},
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
+    assert result.returncode == 0, f"child {args} exited with {result.returncode}: {result.stderr}"
     return result.stdout.splitlines()
 
 

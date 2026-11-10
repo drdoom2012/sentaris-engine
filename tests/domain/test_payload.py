@@ -71,13 +71,13 @@ def test_null_differs_from_absent_key() -> None:
 
 
 def test_key_order_does_not_matter() -> None:
-    forward = Payload.of({"b": 1, "a": 2, "é": 3, "B": 4})
-    backward = Payload.of({"B": 4, "é": 3, "a": 2, "b": 1})
-    pairs = Payload.of([("a", 2), ("é", 3), ("b", 1), ("B", 4)])
+    forward = Payload.of({"b": 1, "a": 2, "\u00e9": 3, "B": 4})
+    backward = Payload.of({"B": 4, "\u00e9": 3, "a": 2, "b": 1})
+    pairs = Payload.of([("a", 2), ("\u00e9", 3), ("b", 1), ("B", 4)])
     assert forward == backward == pairs
     assert hash(forward) == hash(backward) == hash(pairs)
     assert forward.canonical() == backward.canonical() == pairs.canonical()
-    assert list(forward) == ["B", "a", "b", "é"]
+    assert list(forward) == ["B", "a", "b", "\u00e9"]
 
 
 def test_equality_is_canonical_not_python() -> None:
@@ -86,7 +86,7 @@ def test_equality_is_canonical_not_python() -> None:
 
 
 def test_nfc_and_nfd_strings_are_distinct() -> None:
-    nfc, nfd = Payload.of({"v": "é"}), Payload.of({"v": "é"})
+    nfc, nfd = Payload.of({"v": "\u00e9"}), Payload.of({"v": "e\u0301"})
     assert nfc != nfd
     assert nfc.canonical() == b'{"$map":{"v":"\xc3\xa9"}}'
     assert nfd.canonical() == b'{"$map":{"v":"e\xcc\x81"}}'
@@ -105,14 +105,18 @@ def test_mutable_inputs_are_copied() -> None:
     inner: dict[str, Any] = {"x": [1, 2]}
     items: list[Any] = [inner, 3]
     source: dict[str, Any] = {"items": items}
+    unmutated = copy.deepcopy(source)
     payload = Payload.of(source)
-    before = payload.canonical()
     inner["x"].append(9)
     inner["y"] = 1
     items.append(4)
     source["new"] = 5
-    assert payload.canonical() == before
-    assert Payload.of({"items": [{"x": [1, 2]}, 3]}) == payload
+    frozen_items = payload["items"]
+    assert type(frozen_items) is tuple
+    frozen_inner = frozen_items[0]
+    assert type(frozen_inner) is Payload
+    assert type(frozen_inner["x"]) is tuple
+    assert payload == Payload.of(unmutated)
 
 
 def test_payload_cannot_be_mutated() -> None:

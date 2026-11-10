@@ -86,8 +86,8 @@ VECTORS: list[tuple[str, Callable[[], Any], bytes]] = [
     ),
     (
         "string-escapes",
-        lambda: {"$map": "k", "é": 'a"b\\c\n\x01'},
-        '{"$map":{"$map":"k","é":"a\\"b\\\\c\\n\\u0001"}}'.encode(),
+        lambda: {"$map": "k", "\u00e9": 'a"b\\c\n\x01'},
+        '{"$map":{"$map":"k","\u00e9":"a\\"b\\\\c\\n\\u0001"}}'.encode(),
     ),
     ("key-order", lambda: {"Z": 0, "a": -5, "ab": 2, "aa": 3}, b'{"$map":{"Z":0,"a":-5,"aa":3,"ab":2}}'),
     (
@@ -186,7 +186,7 @@ def _nest(depth: int) -> dict[str, Any]:
 # Sources that must construct and round-trip: the vectors plus edge cases of strings, decimals, size and depth.
 CORPUS: list[tuple[str, Callable[[], Any]]] = [(name, build) for name, build, _ in VECTORS] + [
     ("non-ascii", lambda: {"š": "žluťoučký kůň € \U0001f600"}),
-    ("nfc-and-nfd", lambda: {"nfc": "é", "nfd": "é"}),
+    ("nfc-and-nfd", lambda: {"nfc": "\u00e9", "nfd": "e\u0301"}),
     ("control-characters", lambda: {"c": "".join(chr(code) for code in range(0x20)) + "\x7f"}),
     ("decimal-60-nines", lambda: {"d": Decimal("9" * 60)}),
     ("decimal-huge-exponent", lambda: {"d": Decimal("1E+999999")}),

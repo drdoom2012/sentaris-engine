@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from decimal import Decimal
-from typing import NoReturn, cast, final
+from typing import Any, NoReturn, cast, final
 
-from sentaris_engine.domain.payload import Payload
+from sentaris_engine.domain.payload import Payload, PayloadError
 
 type ParameterValue = str | int | Decimal | bool
 
@@ -30,11 +30,19 @@ class Parameters(Mapping[str, ParameterValue]):
         raise TypeError("construct Parameters with Parameters.of")
 
     @staticmethod
-    def of(source: dict[str, object] | Payload | Sequence[tuple[str, object]] = ()) -> Parameters:
+    def of(source: dict[str, Any] | Payload | Parameters | Sequence[tuple[str, Any]] = ()) -> Parameters:
         """Freeze `source` as parameters; it is accepted or rejected exactly as by `Payload.of`.
 
+        An exact `Parameters` is returned unchanged (it is immutable); a subclass of it raises `PayloadError`.
         Additionally raises `ValueError` for a null, sequence or mapping value.
         """
+        if type(source) is Parameters:
+            return source
+        if isinstance(source, Parameters):
+            raise PayloadError(
+                f"a Parameters subclass ({type(source).__name__}) is not accepted; pass an exact Parameters, "
+                "a dict, a Payload or a sequence of pairs"
+            )
         payload = Payload.of(source)
         for key, value in payload.items():
             if value is None or type(value) is tuple or type(value) is Payload:

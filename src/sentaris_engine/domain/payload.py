@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from decimal import Decimal, InvalidOperation
-from typing import NoReturn, cast, final
+from typing import Any, NoReturn, cast, final
 
 MAX_SAFE_INT = 2**53 - 1
 
@@ -36,7 +36,7 @@ class Payload(Mapping[str, PayloadValue]):
         raise TypeError("construct a Payload with Payload.of")
 
     @staticmethod
-    def of(source: dict[str, object] | Payload | Sequence[tuple[str, object]] = ()) -> Payload:
+    def of(source: dict[str, Any] | Payload | Sequence[tuple[str, Any]] = ()) -> Payload:
         """Freeze `source` into a payload, or raise `PayloadError` if it is not one (ADR-0001).
 
         The top level is a `dict` with `str` keys, a `Payload`, or an exact `list` or `tuple` of exact `(str, value)`

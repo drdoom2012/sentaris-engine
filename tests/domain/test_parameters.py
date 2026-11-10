@@ -119,3 +119,29 @@ def test_parameters_copy_and_pickle_round_trip() -> None:
 
 def test_parameters_repr_shows_the_canonical_form() -> None:
     assert repr(Parameters.of({"a": 1})) == '<Parameters {"$map":{"a":1}}>'
+
+
+def test_of_accepts_typed_dicts_and_pairs_under_strict_mypy() -> None:
+    # `dict` is invariant: these typed variables must type-check as `Parameters.of` sources (covered by `make typecheck`).
+    closes: dict[str, Decimal] = {"a": Decimal("1.0")}
+    counts: dict[str, int] = {"a": 1, "b": 2}
+    pairs: list[tuple[str, int]] = [("b", 2), ("a", 1)]
+    assert Parameters.of(closes)["a"] == Decimal("1.0")
+    assert Parameters.of(counts) == Parameters.of(pairs)
+    lists: dict[str, list[int]] = {"a": [1, 2]}
+    with pytest.raises(ValueError, match="'a'"):
+        Parameters.of(lists)
+
+
+def test_of_returns_an_exact_parameters_instance_unchanged() -> None:
+    parameters = Parameters.of({"a": 1})
+    assert Parameters.of(parameters) is parameters
+
+
+def test_of_rejects_a_parameters_subclass_in_parameters_words() -> None:
+    subclass = type("Sub", (Parameters,), {"__slots__": ()})
+    instance: Any = object.__new__(subclass)
+    with pytest.raises(PayloadError, match="a Parameters subclass"):
+        Parameters.of(instance)
+    with pytest.raises(PayloadError, match="payload source"):
+        Payload.of(cast(Any, Parameters.of({"a": 1})))

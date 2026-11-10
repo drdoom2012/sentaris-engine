@@ -197,3 +197,14 @@ def test_deep_nesting_beyond_recursion_limit() -> None:
     assert payload == again
     assert hash(payload) == hash(again)
     assert payload != Payload.of({"root": None})
+
+
+def test_of_accepts_typed_dicts_and_pairs_under_strict_mypy() -> None:
+    # `dict` is invariant: these typed variables must type-check as `Payload.of` sources (covered by `make typecheck`).
+    closes: dict[str, Decimal] = {"a": Decimal("1.0")}
+    counts: dict[str, int] = {"a": 1, "b": 2}
+    lists: dict[str, list[int]] = {"a": [1, 2]}
+    pairs: list[tuple[str, int]] = [("b", 2), ("a", 1)]
+    assert Payload.of(closes).canonical() == b'{"$map":{"a":{"$decimal":"1.0"}}}'
+    assert Payload.of(counts) == Payload.of(pairs)
+    assert Payload.of(lists).canonical() == b'{"$map":{"a":[1,2]}}'

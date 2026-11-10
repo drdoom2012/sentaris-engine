@@ -1,7 +1,7 @@
 # Sentaris Engine — Domain
 
 **Repository:** `sentaris-engine`  
-**Status:** Foundation, revision 8 (2026-11-10). Strategy-agnostic: the engine-wide rules (section 5) are established; strategy-specific, state-handling, data-quality and delivery decisions are open (section 10).  
+**Status:** Foundation, revision 9 (2026-11-10). Strategy-agnostic: the engine-wide rules (section 5) are established; strategy-specific, state-handling, data-quality and delivery decisions are open (section 10).  
 **Scope:** The concepts every strategy shares, the business rules every evaluation must obey, and the decisions still missing. It defines no strategy, signal kind or state machine. Code structure and tooling are in `CLAUDE.md`; market data semantics are in the Quasar Market Data contract (`../quasar-market-data/docs/contracts/api-v1.md`).
 
 This is the **single source of truth for engine-wide business rules**. `CLAUDE.md`, `README.md`, specs, plans and code comments refer to it and do not restate it (section 11). What a particular strategy does is specified separately when that strategy is requested; it must not contradict this document and does not copy it.
@@ -42,7 +42,7 @@ Live scanning and historical replay are the same pipeline with a different `as_o
 
 | Status | Capability |
 |---|---|
-| Built | Project foundation: layers, import contracts, lint and type checks. |
+| Built | Project foundation: layers, import contracts, lint and type checks. Signal payload with its canonical form (OD-14, ADR-0001): construction by exact type with freezing by copy, and the canonical encoder (`sentaris_engine.domain.payload`). |
 | Planned (named in the architecture, not built, not scheduled; needs an explicit request) | Strategies; building snapshots from Quasar; live scanning; historical replay. |
 | Open (not decided whether wanted, OD-11, OD-12, OD-20) | Persistence of results and of strategy state; a REST endpoint; notification or other delivery; evaluation of replay output (backtest). |
 | Excluded by design | Trading and order execution; exchange credentials; any exchange access that bypasses Quasar (DR-18, DR-19). |
@@ -118,7 +118,7 @@ Identical inputs, parameters and `as_of` produce identical results, live and in 
 | DR-08 | Time, randomness and I/O are passed in and never read in `domain` or `strategies`. | CONFIGURED, partly: the import-linter contract "domain and strategies import only allowlisted pure standard-library modules" (default deny) rejects imports of modules such as `time`, `random`, `os`; ruff TID251 bans `datetime.now/utcnow/today` and `date.today` outside `infrastructure/`. **Not checked:** calls to builtins that do I/O (`open`, `print`, `input`) and imports that are computed at run time |
 | DR-09 | Results carry no wall-clock timestamps or generated ids. Anything identifying a result is derived from the inputs. | PLANNED (unscheduled) |
 | DR-10 | Results never depend on the iteration order of unordered data. Sort explicitly. | PLANNED (unscheduled) |
-| DR-11 | Prices and volumes use `Decimal` or the exact representation Quasar provides. They are never round-tripped through `float`. | PLANNED (unscheduled) |
+| DR-11 | Prices and volumes use `Decimal` or the exact representation Quasar provides. They are never round-tripped through `float`. | PLANNED (SE-4): the Quasar client does not exist yet. Partly covered: signal payloads reject `float` and non-finite `Decimal` (`tests/domain/test_payload.py::test_rejected_sources_raise_payload_error`) |
 | DR-12 | The same strategy code serves live and replay. No mode flags inside a strategy. | PLANNED (unscheduled) |
 | DR-13 | Replay is tested by asserting identical output for repeated runs on identical input. | NOT_APPLICABLE: test convention, applies to each strategy's tests |
 
@@ -178,7 +178,7 @@ Not decided: how strategies declare the inputs they need, and where strategy spe
 
 Adopted from the invariant register of Quasar Market Data (`docs/invariants.md`) so that no rule is described as enforced when it is only written down.
 
-- `ENFORCED`: a check runs in `make check` **and** a named negative test exists that fails when the rule is violated. The evidence cell is `path/to/test.py::test_name`. A passing positive test alone does not qualify. *No rule has this status yet: `tests/` holds only `test_package.py`.*
+- `ENFORCED`: a check runs in `make check` **and** a named negative test exists that fails when the rule is violated. The evidence cell is `path/to/test.py::test_name`. A passing positive test alone does not qualify. *No rule has this status yet.*
 - `CONFIGURED`: a check runs in `make check`, but no committed negative test shows it fails on a violation. *Added for this project: Quasar's three statuses cannot describe a check that exists without a negative test.* On 2026-11-09 each `CONFIGURED` check was tried by hand against a scratch copy with a deliberate violation; what it caught and did not catch is stated in the rule's cell.
 - `PLANNED`: not enforced yet. The cell names the task that will enforce it; `unscheduled` means no task names it.
 - `NOT_APPLICABLE`: decided to be out of scope as an automated mechanism. The cell gives the reason.
@@ -256,3 +256,4 @@ Conventions adopted from Quasar Market Data:
 | 6 | 2026-11-10 | At the user's request (ADR-0001 amended). **OD-14**: null added as a payload value (not a scalar, so parameters are unchanged and now stated as excluding it); the canonical byte form is fixed now, normatively in ADR-0001 with test vectors, replacing "chosen by the first slice that serializes". **OD-13**: parameter wording names the exclusion of null, meaning unchanged. OD-22 stays open. No DR changed. |
 | 7 | 2026-11-10 | Roadmap gaps G-2 and G-3 recorded as **OD-23** (live/replay equivalence for late-collected data) and **OD-24** (consistent data within one run), both open. "Historical replay" concept now cites them. No decision taken; no DR changed. |
 | 8 | 2026-11-10 | At the user's request (ADR-0001 amended), closing the Gate 1 clarifications of the roadmap. **OD-14**: integers in a payload, and hence in parameters (OD-13), are bounded to ±(2^53 − 1), because signals are to reach a database, a frontend and notifications; kinds are matched by exact Python type (subclasses, enums, `set` and `frozenset` rejected); containers are frozen by copy; duplicate keys are rejected; the `Decimal` text is independent of the `decimal` context. Canonical bytes of every previously valid payload are unchanged, except that integers outside the range are no longer payload values. No DR changed. |
+| 9 | 2026-11-10 | Slice SE-1 (stateless evaluation), in progress. Built: the signal payload with its canonical form (OD-14, ADR-0001), section 2. **DR-11** scheduled for SE-4 and noted as partly covered by payload construction (section 5). No rule or decision changed. |

@@ -1,0 +1,100 @@
+[project]
+name = "sentaris-engine"
+version = "0.1.0"
+description = "Independent deterministic analysis engine for cryptocurrency market data from the Quasar Market Data REST API."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+    "import-linter",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sentaris_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers -m 'not live'"
+markers = [
+    "live: tests that call a running Quasar Market Data API (excluded by default)",
+]
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Defaults (E4, E7, E9, F) plus import order, pyupgrade, bugbear, naive-datetime and banned-API checks (determinism).
+extend-select = ["I", "UP", "B", "DTZ", "TID251"]
+
+# Reading the wall clock makes results depend on when they run. The evaluation timestamp is always passed in; the real
+# clock lives only in infrastructure (exempted below).
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"datetime.datetime.now".msg = "Do not read the wall clock; take the evaluation timestamp as an argument."
+"datetime.datetime.utcnow".msg = "Do not read the wall clock; take the evaluation timestamp as an argument."
+"datetime.datetime.today".msg = "Do not read the wall clock; take the evaluation timestamp as an argument."
+"datetime.date.today".msg = "Do not read the wall clock; take the evaluation timestamp as an argument."
+
+[tool.ruff.lint.per-file-ignores]
+"src/sentaris_engine/infrastructure/**" = ["TID251"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.importlinter]
+root_package = "sentaris_engine"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "layers: application > strategies | infrastructure > domain"
+type = "layers"
+layers = [
+    "sentaris_engine.application",
+    "sentaris_engine.strategies | sentaris_engine.infrastructure",
+    "sentaris_engine.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "domain and strategies import only allowlisted pure standard-library modules"
+type = "forbidden"
+# Default deny: every module is forbidden (third-party and standard library alike) unless allowlisted below, so a new
+# I/O-capable import fails until someone consciously adds it here. Our own layers are governed by the layers contract.
+# The allowlist is `sentaris_engine.** -> x`: the source is already limited to domain and strategies by source_modules.
+# Wall-clock reads through the allowed `datetime` are banned by ruff (TID251, see [tool.ruff.lint]).
+source_modules = ["sentaris_engine.domain", "sentaris_engine.strategies"]
+forbidden_modules = ["*"]
+# An allowlist need not match any import yet.
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "sentaris_engine.** -> __future__",
+    "sentaris_engine.** -> abc",
+    "sentaris_engine.** -> collections",
+    "sentaris_engine.** -> dataclasses",
+    "sentaris_engine.** -> datetime",
+    "sentaris_engine.** -> decimal",
+    "sentaris_engine.** -> enum",
+    "sentaris_engine.** -> fractions",
+    "sentaris_engine.** -> functools",
+    "sentaris_engine.** -> itertools",
+    "sentaris_engine.** -> math",
+    "sentaris_engine.** -> operator",
+    "sentaris_engine.** -> statistics",
+    "sentaris_engine.** -> types",
+    "sentaris_engine.** -> typing",
+]
+
+[[tool.importlinter.contracts]]
+name = "Quasar Market Data internals are never imported"
+type = "forbidden"
+source_modules = ["sentaris_engine"]
+forbidden_modules = ["quasar_market_data"]

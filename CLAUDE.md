@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Sentaris Engine is an independent application for deterministic analysis of cryptocurrency market data from the Quasar Market Data REST API (sibling project `../quasar-market-data`). What it analyses and the rules it obeys are in `docs/domain.md`.
 
-Current state: project foundation only. No strategy, signal, backtest, persistence or REST endpoint exists yet; do not add them without an explicit request (`docs/domain.md`, section 2).
+Current state: the domain types (market data, parameters, signals, results, evaluation context, the stateless strategy contract), the canonical payload form and the stateless evaluation of one strategy over a hand-built snapshot exist. There is no Quasar client, snapshot building, stateful strategy, multi-strategy execution, persistence, replay, scanning or REST endpoint; do not add them without an explicit request (`docs/domain.md`, section 2).
 
 Stack: Python 3.12, uv, `src/` layout (package `sentaris_engine`), pytest, ruff, mypy (strict), import-linter. There are no runtime dependencies; adding one needs a concrete reason.
 

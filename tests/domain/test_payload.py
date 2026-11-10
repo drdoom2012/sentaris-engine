@@ -138,7 +138,6 @@ def test_payload_cannot_be_mutated() -> None:
     assert payload == Payload.of({"m": {"a": 1}, "s": (1, 2)})
 
 
-@pytest.mark.xfail(strict=True, raises=AttributeError, reason="Payload.from_canonical is added in Task 2")
 def test_copy_and_pickle_round_trip() -> None:
     payload = Payload.of({"m": {"a": Decimal("1.0")}, "s": [None, True, "x"]})
     assert copy.copy(payload) == payload

@@ -1,13 +1,13 @@
 """Signal payload: an immutable mapping with exactly one canonical byte form (OD-14; ADR-0001 is normative).
 
-Construction and encoding are iterative, so no nesting depth raises `RecursionError` (ADR-0001: no depth bound).
+Construction, encoding and decoding are iterative, so no depth raises `RecursionError` (ADR-0001: no depth bound).
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from decimal import Decimal
-from typing import Any, NoReturn, cast, final
+from decimal import Decimal, InvalidOperation
+from typing import NoReturn, cast, final
 
 MAX_SAFE_INT = 2**53 - 1
 
@@ -55,6 +55,21 @@ class Payload(Mapping[str, PayloadValue]):
             return _freeze(source, entries)
         _reject(f"a payload source must be a dict, a Payload or a sequence of pairs, got {type(source).__name__}")
 
+    @classmethod
+    def from_canonical(cls, data: bytes) -> Payload:
+        """The payload whose canonical form is exactly `data`; anything else raises `PayloadError` (ADR-0001)."""
+        if type(data) is not bytes:
+            _reject(f"canonical form must be bytes, got {type(data).__name__}")
+        try:
+            payload = _decode(data.decode("utf-8"))
+        except PayloadError:
+            raise
+        except (InvalidOperation, ValueError, UnicodeDecodeError, IndexError) as error:
+            raise PayloadError(f"not a canonical form: {error}") from error
+        if payload.canonical() != data:
+            _reject("not the canonical form of the payload it encodes")
+        return payload
+
     def canonical(self) -> bytes:
         """The canonical form of ADR-0001, computed once and cached on this object."""
         if self._canonical is None:
@@ -88,8 +103,7 @@ class Payload(Mapping[str, PayloadValue]):
         raise AttributeError("a Payload is immutable")
 
     def __reduce__(self) -> tuple[Callable[[bytes], Payload], tuple[bytes]]:
-        # `from_canonical` is added with the decoder (SE-1, Task 2); until then reducing raises AttributeError.
-        return cast(Any, Payload).from_canonical, (self.canonical(),)
+        return Payload.from_canonical, (self.canonical(),)
 
 
 def _reject(message: str) -> NoReturn:
@@ -261,3 +275,147 @@ def _encode(payload: Payload) -> bytes:
                     stack.append(b",")
             stack.append(b'{"$map":{')
     return b"".join(chunks)
+
+
+_DIGITS = frozenset("0123456789")
+_HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
+_SIMPLE_ESCAPES = {'"': '"', "\\": "\\", "b": "\b", "t": "\t", "n": "\n", "f": "\f", "r": "\r"}
+_MAX_INT_DIGITS = 16
+
+
+class _Reader:
+    """A position in decoded text, with the readers for the shapes the encoder produces and nothing else."""
+
+    __slots__ = ("pos", "text")
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.pos = 0
+
+    def take(self, literal: str) -> bool:
+        if self.text.startswith(literal, self.pos):
+            self.pos += len(literal)
+            return True
+        return False
+
+    def expect(self, literal: str) -> None:
+        if not self.take(literal):
+            _reject(f"expected {literal!r} at offset {self.pos}")
+
+    def string(self) -> str:
+        """A string body after its opening quote, through the closing quote."""
+        text = self.text
+        parts: list[str] = []
+        start = self.pos
+        while True:
+            char = text[self.pos]
+            if char == '"':
+                parts.append(text[start : self.pos])
+                self.pos += 1
+                return "".join(parts)
+            if char != "\\":
+                self.pos += 1
+                continue
+            parts.append(text[start : self.pos])
+            escape = text[self.pos + 1]
+            if escape in _SIMPLE_ESCAPES:
+                parts.append(_SIMPLE_ESCAPES[escape])
+                self.pos += 2
+            elif escape == "u":
+                hex_digits = text[self.pos + 2 : self.pos + 6]
+                if len(hex_digits) != 4 or not all(digit in _HEX_DIGITS for digit in hex_digits):
+                    _reject(f"invalid \\u escape at offset {self.pos}")
+                parts.append(chr(int(hex_digits, 16)))
+                self.pos += 6
+            else:
+                _reject(f"invalid escape at offset {self.pos}")
+            start = self.pos
+
+    def key(self) -> str:
+        """A mapping entry's key and the colon after it."""
+        self.expect('"')
+        key = self.string()
+        self.expect(":")
+        return key
+
+    def scalar(self) -> PayloadValue:
+        if self.take("null"):
+            return None
+        if self.take("true"):
+            return True
+        if self.take("false"):
+            return False
+        if self.take('"'):
+            return self.string()
+        if self.take('{"$decimal":"'):
+            end = self.text.find('"', self.pos)
+            if end < 0:
+                _reject("unterminated Decimal text")
+            value = Decimal(self.text[self.pos : end])
+            if not value.is_finite():
+                _reject(f"Decimal {value} is not finite")
+            self.pos = end
+            self.expect('"}')
+            return value
+        start = self.pos
+        self.take("-")
+        digits_start = self.pos
+        while self.pos < len(self.text) and self.text[self.pos] in _DIGITS:
+            self.pos += 1
+            if self.pos - digits_start > _MAX_INT_DIGITS:
+                _reject(f"integer at offset {start} has more than {_MAX_INT_DIGITS} digits")
+        if self.pos == digits_start:
+            _reject(f"no payload value at offset {start}")
+        return int(self.text[start : self.pos])
+
+
+class _Open:
+    """A container being decoded: its keys (a mapping) or `None` (a sequence), and its values so far."""
+
+    __slots__ = ("keys", "values")
+
+    def __init__(self, keys: list[str] | None) -> None:
+        self.keys = keys
+        self.values: list[PayloadValue] = []
+
+
+def _close(frame: _Open) -> PayloadValue:
+    if frame.keys is None:
+        return tuple(frame.values)
+    return Payload.of(list(zip(frame.keys, frame.values, strict=True)))
+
+
+def _decode(text: str) -> Payload:
+    """Decode iteratively with an explicit stack of open containers; whitespace and every other shape is rejected."""
+    reader = _Reader(text)
+    stack: list[_Open] = []
+    while True:
+        done: PayloadValue
+        if reader.take("["):
+            stack.append(_Open(None))
+            if not reader.take("]"):
+                continue
+            done = _close(stack.pop())
+        elif reader.take('{"$map":{'):
+            stack.append(_Open([]))
+            if not reader.take("}}"):
+                cast(list[str], stack[-1].keys).append(reader.key())
+                continue
+            done = _close(stack.pop())
+        else:
+            done = reader.scalar()
+        while stack:
+            frame = stack[-1]
+            frame.values.append(done)
+            if reader.take(","):
+                if frame.keys is not None:
+                    frame.keys.append(reader.key())
+                break
+            reader.expect("]" if frame.keys is None else "}}")
+            done = _close(stack.pop())
+        else:
+            if reader.pos != len(text):
+                _reject(f"unexpected data at offset {reader.pos}")
+            if type(done) is not Payload:
+                _reject("the top level of a canonical form is a mapping")
+            return done

@@ -75,3 +75,59 @@ class LastCloseProbe:
         last = series.candles[-1]
         payload = Payload.of({"as_of": context.as_of, "close": last.close, "count": len(series.candles)})
         return Signals((Signal("probe.last_close", payload),))
+
+
+@dataclass(frozen=True, slots=True)
+class RecordingProbe:
+    """Appends each context it receives to `seen` and returns `outcome`, to show whether and with what it ran."""
+
+    id: str
+    version: str
+    outcome: Result
+    seen: list[EvaluationContext]
+
+    def evaluate(self, context: EvaluationContext) -> Result:
+        self.seen.append(context)
+        return self.outcome
+
+
+@dataclass(frozen=True, slots=True)
+class RecordingRaisingProbe:
+    """Appends each context it receives to `seen`, then raises `error`."""
+
+    id: str
+    version: str
+    error: Exception
+    seen: list[EvaluationContext]
+
+    def evaluate(self, context: EvaluationContext) -> Result:
+        self.seen.append(context)
+        raise self.error
+
+
+class CountingIdentityProbe:
+    """Counts how often its `id` and `version` are read; evaluates to no signal."""
+
+    def __init__(self) -> None:
+        self.id_reads = 0
+        self.version_reads = 0
+
+    @property
+    def id(self) -> str:
+        self.id_reads += 1
+        return "counted"
+
+    @property
+    def version(self) -> str:
+        self.version_reads += 1
+        return "1"
+
+    def evaluate(self, context: EvaluationContext) -> Result:
+        return NoSignal()
+
+
+class FailingStrError(Exception):
+    """An exception whose `__str__` raises, to show that a report never reads an exception's text."""
+
+    def __str__(self) -> str:
+        raise RuntimeError("str failed")

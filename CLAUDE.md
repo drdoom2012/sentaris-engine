@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-Nothing is built. The repository holds two documents and no code, tooling or build files (an earlier implementation was deliberately removed; do not restore it from git history):
+SE-1 (project skeleton and architecture checks) exists: the Python package, tooling and `make check`. There is no engine logic yet. The domain document remains the single source of truth and wins over the roadmap (see below); besides the skeleton the repository holds the workflow documents under `docs/superpowers` and the CI workflow (an earlier implementation was deliberately removed; do not restore it from git history):
 
 - `docs/domain.md` is the specification and the **single source of truth** for engine-wide business rules.
 - `docs/roadmap.md` splits the implementation into slices (`SE-n`) with their dependencies and decision gates. If the two disagree, the domain document wins.
@@ -13,7 +13,13 @@ Read the relevant sections of both before planning or writing anything.
 
 ## Commands
 
-None exist yet. The roadmap's first slice (SE-1) creates the Python package, test runner, linter, type checker and a `make check` target; the tooling is chosen in the SE-1 plan. Once SE-1 lands, `make check` is the completion gate for every slice. Update this section then, including how to run a single test.
+- `uv sync` installs the locked dependencies.
+- `make check` is the completion gate for every slice. It runs, in order: `make lint` (`ruff check` and `ruff format --check` over `src` and `tests`), `make typecheck` (`mypy`), `make imports` (`lint-imports`, layering contracts) and `make test` (`pytest`, which also holds the AST purity checks and the dependency check).
+- One test: `uv run pytest tests/path/test_file.py::test_name`.
+- The pinned lists of the architecture checks (stdlib allowlist, forbidden calls, banned names, known children, dependency allowlists) live in `tests/architecture/`; widening one is a reviewed change of those tests (SE-1 spec A4).
+- Targeted checks while implementing: `uv run ruff check <files>`, `uv run mypy <files>`, and the task's own tests. Run `make check` at task completion and before each commit.
+- A Claude Code `PreToolUse` hook (`scripts/hooks/pre_commit_check.sh`, wired in `.claude/settings.json`) runs `make check` in the committing work tree before `git commit`. It is a local convenience; CI (`.github/workflows/check.yml`) is the authoritative gate.
+- At slice completion the orchestrator runs `make check` itself; CI runs on the pushed branch only after the user says to push.
 
 ## Agentic workflow
 

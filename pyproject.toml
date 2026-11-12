@@ -1,0 +1,42 @@
+[project]
+name = "sentaris-engine"
+version = "0.1.0"
+description = "Deterministic analysis of cryptocurrency market data: strategies evaluated over snapshots as of one moment."
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy", "import-linter"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sentaris_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.importlinter]
+root_package = "sentaris_engine"
+
+[[tool.importlinter.contracts]]
+name = "domain imports no other layer"
+type = "forbidden"
+source_modules = ["sentaris_engine.domain"]
+forbidden_modules = ["sentaris_engine.application", "sentaris_engine.strategies", "sentaris_engine.infrastructure"]
+
+[[tool.importlinter.contracts]]
+name = "application, strategies and infrastructure are independent"
+type = "independence"
+modules = ["sentaris_engine.application", "sentaris_engine.strategies", "sentaris_engine.infrastructure"]

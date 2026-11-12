@@ -1,3 +1,12 @@
 .idea/
 .superpowers/
 .claude/settings.local.json
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.import_linter_cache/
+*.egg-info/
+dist/

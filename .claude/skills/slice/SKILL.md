@@ -17,6 +17,7 @@ Work on one slice only. Stop at every point marked **User**. Do not start the ne
 3. **Open decisions stop the run.** Superpowers tells the controller to rule on ambiguities and continue. Here a ruling is allowed only on matters of implementation. Anything that touches an `OD-xx`, a `DR-xx`, domain section 6, or something `docs/domain.md` does not state is not ruled on: stop and ask the user.
 4. **Implementers run on `sonnet` or `opus`**, never lower. Use `opus` when the task needs design judgment, touches a domain contract in a subtle way (canonical form, availability, determinism), or after two failed fix rounds on `sonnet`.
 5. **Dispatch descriptions start with the slice and task**, for example `SE-2 T3: implement canonical encoder`, so the dispatch log can be read per slice.
+6. **Context is reset at the two approval points.** The state of a slice lives in files (specification, plan), not in the conversation, so the orchestrator's context is cut where the next stage needs only those files. Every later turn re-reads the context, so a long planning discussion is paid for again at each step of the implementation. The orchestrator cannot clear its own context: after the approval it says so and gives the user the exact command to run (`/clear`, then `/slice SE-n <next stage>`). Before it does, everything the next stage needs is in the saved document, including rulings made and questions left open; whatever is only in the conversation is lost.
 
 ## Stage 1 — Prerequisites
 
@@ -30,7 +31,7 @@ Use `superpowers:brainstorming`. The roadmap row already fixes the scope; ask th
 
 Review: dispatch `slice-reviewer` with the specification path (this replaces the builder check; include the builder-check questions in the prompt). Fix findings; a finding that needs a domain decision goes to the user.
 
-**User** — approve the specification.
+**User** — approve the specification. Then recommend a context reset (item 6): `/clear`, then `/slice SE-n plan`.
 
 ## Stage 3 — Plan
 
@@ -40,7 +41,7 @@ Task size: every task costs at least three dispatches (implementer and two revie
 
 Review: dispatch `slice-reviewer` with the plan path and the specification path. Fix findings.
 
-**User** — approve the plan. No implementation before that.
+**User** — approve the plan. No implementation before that. Then recommend a context reset (item 6): `/clear`, then `/slice SE-n implementation`. The resumed session reads the approved specification and plan from disk and continues at Stage 4 or 5.
 
 ## Stage 4 — Exploration
 

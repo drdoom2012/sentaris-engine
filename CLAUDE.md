@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-SE-1 (project skeleton and architecture checks) exists: the Python package, tooling and `make check`. There is no engine logic yet. The domain document remains the single source of truth and wins over the roadmap (see below); besides the skeleton the repository holds the workflow documents under `docs/superpowers` and the CI workflow (an earlier implementation was deliberately removed; do not restore it from git history):
+SE-1 (project skeleton and architecture checks) and SE-2 exist. SE-1 is the Python package, tooling and `make check`; SE-2 is the payload type and canonical form (`sentaris_engine.domain.payload`). There is no other engine logic yet. The domain document remains the single source of truth and wins over the roadmap (see below); besides the skeleton the repository holds the workflow documents under `docs/superpowers` and the CI workflow (an earlier implementation was deliberately removed; do not restore it from git history):
 
 - `docs/domain.md` is the specification and the **single source of truth** for engine-wide business rules.
 - `docs/roadmap.md` splits the implementation into slices (`SE-n`) with their dependencies and decision gates. If the two disagree, the domain document wins.

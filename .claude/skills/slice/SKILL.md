@@ -36,6 +36,8 @@ Review: dispatch `slice-reviewer` with the specification path (this replaces the
 
 Use `superpowers:writing-plans`; the plan is saved to `docs/superpowers/plans/YYYY-MM-DD-se-N-<topic>.md`. Every task states: exact scope, expected files, relevant contracts, acceptance criteria, tests, verification commands, completion condition, and the implementer model (`sonnet` or `opus`) with a reason when `opus`.
 
+Task size: every task costs at least three dispatches (implementer and two reviews), so small tasks are not split off on their own. Merge tasks that touch the same area or share tests. Split a task only when its diff would be too large to review well, or when part of it needs `opus` and the rest does not.
+
 Review: dispatch `slice-reviewer` with the plan path and the specification path. Fix findings.
 
 **User** — approve the plan. No implementation before that.
@@ -51,7 +53,9 @@ Use `superpowers:subagent-driven-development` in an isolated branch or worktree 
 1. Implementer (`general-purpose`, explicit `model`), TDD, task-level tests.
 2. `spec-reviewer` and `quality-reviewer` on the task's review package, in parallel.
 3. Run the task's verification commands yourself. An agent's statement that checks pass is not evidence.
-4. Findings go back to the implementer; then a scoped re-review by the reviewer concerned. Repeat until no CRITICAL or HIGH finding is open. MEDIUM and LOW are fixed or recorded in the ledger with a reason.
+4. Findings go back to the implementer; then a scoped re-review by the reviewer concerned (see "Re-review package" below). Repeat until no CRITICAL or HIGH finding is open. MEDIUM and LOW are fixed or recorded in the ledger with a reason.
+
+Re-review package: the diff of the fix round only, the findings it answers, and the domain sections those findings cite. Not the whole task again. The reviewer checks that each finding is resolved and that the fix introduced no new problem in the lines it touched. The same applies to the re-review in Stage 10.
 
 During implementation run targeted checks (the task's tests, the linter on changed files). Run the whole gate at task completion.
 
@@ -59,7 +63,7 @@ During implementation run targeted checks (the task's tests, the linter on chang
 
 1. Run `make check` yourself and read its output.
 2. Dispatch `slice-reviewer` for the complete-slice review with the whole-branch review package and the ledger's deferred findings (Superpowers' final review, on this agent).
-3. One fix dispatch for its findings, one scoped re-review, `make check` again.
+3. One fix dispatch for its findings, one scoped re-review (re-review package as in Stages 5 to 9), `make check` again.
 4. Before the Superpowers workspace is deleted, write `docs/superpowers/reports/se-N.md` from the ledger and `.superpowers/dispatch-log.jsonl`:
    - per task: implementer model, implementation attempts, review findings by severity, fix/review rounds;
    - `make check` result with the command's own summary line;

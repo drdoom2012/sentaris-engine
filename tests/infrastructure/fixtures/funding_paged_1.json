@@ -1,0 +1,26 @@
+{
+  "venue": "binance-usdm",
+  "symbol": "BTC/USDT:USDT",
+  "time_semantics": "settlement",
+  "start": 1792656000000,
+  "end": 1792720000000,
+  "series": {
+    "oldest_funding_time_ms": 1792627200000,
+    "newest_funding_time_ms": 1792713600000
+  },
+  "rows": [
+    { "funding_time_ms": 1792656000000, "rate_type": "Regular", "funding_rate": "0.0001", "mark_price": "82709.1", "conflicted": false },
+    { "funding_time_ms": 1792684800000, "rate_type": "Regular", "funding_rate": "-0.00005123", "mark_price": "82744.5", "conflicted": false }
+  ],
+  "next": 1792713600000,
+  "coverage": {
+    "as_of_ms": 1792727045000,
+    "verified_from_ms": 1792569600000,
+    "verified_through_ms": 1792727000000,
+    "verified_at_ms": 1792727040000,
+    "window_state": "verified",
+    "events_in_window": 4,
+    "conflicted_events": 0,
+    "complete": true
+  }
+}

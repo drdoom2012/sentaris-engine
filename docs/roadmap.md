@@ -1,6 +1,6 @@
 # Sentaris Engine — Implementation Roadmap
 
-**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b). Nothing is built.  
+**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b) and 2026-11-13 (OD-27). Nothing is built.  
 **Source:** `docs/domain.md`. This roadmap cites rules and decisions by ID (`DR-xx`, `OD-xx`) and does not restate them. If the two disagree, the domain document wins.
 
 The roadmap splits the path from an empty repository to live scanning and historical replay into slices (`SE-n`). Each slice goes through the usual cycle: plan, independent review, implementation, independent review.
@@ -48,7 +48,7 @@ SE-8 and SE-9 are needed only once a strategy uses those inputs.
 | **SE-5b** Malformed parameters in execution | A pair whose parameters are refused gets an evaluation failure for that pair alone, without calling the strategy; the other pairs are unaffected. | Sections 6.5, 6.7; DR-14, DR-22 | SE-5 | OD-3 (the code for malformed parameters) |
 | **SE-10** Data-quality gate | Validation before evaluation, the failure-code taxonomy, who produces a failure, what the pairs of an instrument report when its snapshot cannot be built. | DR-14 to DR-17, section 6.7 | SE-5, SE-7b | OD-3 (remainder), OD-8 |
 | **SE-11** Indicators | Only if a strategy needs indicators: the decided source and numeric policy. | DR-11, DR-15 | SE-3; SE-6 if Quasar's indicators are the decided source | OD-9 |
-| **SE-12** First real strategy | One stateless strategy, specified on its own request, evaluated end to end over fixture data. | Domain section 3 ("Out of scope"), DR-12 | SE-10, SE-5b; SE-8, SE-9 and SE-11 only if the strategy uses them | The strategy's own specification; OD-13 (where specifications live) |
+| **SE-12** First real strategy | One stateless strategy, specified on its own request, evaluated end to end over fixture data. Every strategy specification states whether the strategy depends on earlier evaluations (phases, a path over time, signals already emitted) and, if it does, why that cannot be recomputed from a bounded window of data (OD-27); a strategy that needs state goes to OD-27 before it is planned. | Domain section 3 ("Out of scope"), DR-12 | SE-10, SE-5b; SE-8, SE-9 and SE-11 only if the strategy uses them | The strategy's own specification; OD-13 (where specifications live) |
 
 ### Phase D — Live scanning
 
@@ -64,7 +64,7 @@ Per the "Consequence for trust" in domain section 5, SE-13 is the first point at
 
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
-| **SE-14** State handling in execution | Evaluation scope, loading and passing `previous_state`, running the stateful transition, receiving `next_state`, state after a failure or a raise, continuity. State stays opaque. Tested with test strategies. | DR-25, DR-26, DR-27, section 6.7 | SE-5 | OD-17, OD-19, OD-20 |
+| **SE-14** State handling in execution | Evaluation scope, loading and passing `previous_state`, running the stateful transition, receiving `next_state`, state after a failure or a raise, continuity. State stays opaque. Tested with test strategies. | DR-25, DR-26, DR-27, section 6.7 | SE-5 | OD-27, OD-17, OD-19, OD-20 |
 | **SE-15** State persistence and commit | Only if persistence is wanted (domain section 2, "Open"): the state store, encoding, consistent commit of state and signals. | DR-28, DR-13 | SE-14 | OD-11, OD-18, OD-20; OD-25 if signals are persisted or delivered |
 
 ### Phase F — Historical replay
@@ -97,7 +97,7 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 | 4 | OD-3 (remainder), OD-8 | SE-10, SE-5b | |
 | 5 | First strategy specification; OD-9 and OD-16 if it uses indicators or funding | SE-12, SE-11, SE-9 | The strategy's needs show which inputs and indicators matter. |
 | 6 | OD-5, OD-11; OD-18 and OD-25 if results leave memory | SE-13, SE-16 (OD-5) | |
-| 7 | OD-17, OD-19, OD-20 | SE-14, SE-15 | Only when a stateful strategy is requested. |
+| 7 | OD-27, then OD-17, OD-19, OD-20 | SE-14, SE-15 | Only when a stateful strategy is requested. OD-27 first: it decides whether these are needed at all. |
 | 8 | OD-12 | SE-16 | |
 
 ## 4. Dependencies
@@ -106,7 +106,7 @@ Square brackets are the gate a slice waits for, in addition to the slices before
 
 ```text
 SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬──────────────────────────────────────────────┐
-                    │        │        └→ [OD-17, OD-19, OD-20] SE-14                 │
+                    │        │        └→ [OD-27, OD-17, OD-19, OD-20] SE-14          │
                     │        │              └→ [OD-11, OD-18, OD-20] SE-15           │
                     │        └→ [OD-13] SE-7a ─┐                                     │
                     ├→ SE-6 ───────────────────┴→ [OD-6, OD-7, OD-4, OD-24] SE-7b ─┬─┴→ [OD-3, OD-8] SE-10

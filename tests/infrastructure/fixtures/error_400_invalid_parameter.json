@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "invalid_parameter",
+    "message": "limit must be between 1 and 1000",
+    "details": { "parameter": "limit", "received": "5000" }
+  }
+}

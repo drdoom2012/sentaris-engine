@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "unknown_series",
+    "message": "no candle of this series has been stored",
+    "details": { "venue": "binance-usdm", "symbol": "BTC/USDT:USDT", "timeframe": "5m" }
+  }
+}

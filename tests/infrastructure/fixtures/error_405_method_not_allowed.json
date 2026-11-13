@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "method_not_allowed",
+    "message": "only GET is allowed",
+    "details": { "allow": "GET" }
+  }
+}

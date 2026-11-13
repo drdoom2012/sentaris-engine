@@ -1,0 +1,37 @@
+{
+  "venue": "binance-usdm",
+  "symbol": "BTC/USDT:USDT",
+  "period": "5m",
+  "time_semantics": "period_end",
+  "start": 1792672500000,
+  "end": 1792674600000,
+  "as_of_ms": 1792674530000,
+  "rule": {
+    "cadence": 1,
+    "expected_after_ms": 500000,
+    "lag_threshold_ms": 60000,
+    "retrieval_horizon_ms": 2505600000
+  },
+  "series": {
+    "oldest_time_ms": 1792643700000,
+    "newest_time_ms": 1792673400000
+  },
+  "rows": [
+    { "time_ms": 1792672500000, "open_interest": "95677.779", "open_interest_value": "7446123150.675", "conflicted": false },
+    { "time_ms": 1792672800000, "open_interest": "95690.12", "open_interest_value": "7447031002.4", "conflicted": true },
+    { "time_ms": 1792673400000, "open_interest": "95702.5", "open_interest_value": "7447990111.25", "conflicted": false }
+  ],
+  "next": null,
+  "coverage": {
+    "span": { "start": 1792672500000, "end": 1792674600000 },
+    "slots": 7,
+    "present_slots": 2,
+    "conflicted_slots": 1,
+    "not_yet_expected_slots": 1,
+    "no_longer_recoverable_slots": 0,
+    "due_slots": 1,
+    "stale_slots": 1,
+    "missing_slots": 1,
+    "gap_free": false
+  }
+}

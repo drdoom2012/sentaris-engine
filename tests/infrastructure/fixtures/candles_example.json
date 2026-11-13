@@ -1,0 +1,54 @@
+{
+  "venue": "binance-usdm",
+  "symbol": "BTC/USDT:USDT",
+  "timeframe": "5m",
+  "start": 1792643400000,
+  "end": 1792673400000,
+  "series": {
+    "oldest_open_time_ms": 1792643400000,
+    "newest_open_time_ms": 1792673100000
+  },
+  "candles": [
+    {
+      "open_time_ms": 1792643400000,
+      "open": "82855.4",
+      "high": "82866.1",
+      "low": "82768.1",
+      "close": "82768.2",
+      "volume": "369.221",
+      "turnover": "30587379.8759",
+      "conflicted": false
+    },
+    {
+      "open_time_ms": 1792643700000,
+      "open": "82768.2",
+      "high": "82768.2",
+      "low": "82664.7",
+      "close": "82709",
+      "volume": "580.95",
+      "turnover": "48054366.2802",
+      "conflicted": false
+    },
+    {
+      "open_time_ms": 1792644000000,
+      "open": "82709.1",
+      "high": "82765.3",
+      "low": "82686.2",
+      "close": "82744.5",
+      "volume": "380.864",
+      "turnover": "31506256.9708",
+      "conflicted": false
+    }
+  ],
+  "next": 1792644300000,
+  "coverage": {
+    "span": { "start": 1792643400000, "end": 1792644300000 },
+    "slots": 3,
+    "present_slots": 3,
+    "conflicted_slots": 0,
+    "unavailable_slots": 0,
+    "missing_slots": 0,
+    "beyond_stored_slots": 0,
+    "gap_free": true
+  }
+}

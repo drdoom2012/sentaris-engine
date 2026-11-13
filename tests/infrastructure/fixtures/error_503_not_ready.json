@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_ready",
+    "message": "the database file is missing",
+    "details": { "reason": "database_missing" }
+  }
+}

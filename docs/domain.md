@@ -165,9 +165,11 @@ What this means for the engine, beyond the rules:
 
 Decisions already taken, each given by the user on the date shown. They are not reopened by implementation. The label in brackets is the decision's stable ID.
 
-### 6.1 Time (OD-10, 2026-11-10)
+### 6.1 Time (OD-10, 2026-11-10; amended 2026-11-13)
 
 Every instant, `as_of` included, is an integer count of UTC milliseconds since the Unix epoch; every duration, such as a timeframe, is integer milliseconds and greater than zero. No timezone-bearing or floating-point time type. This matches the Quasar contract exactly.
+
+An instant lies in `0 … 2^53 − 1` and a duration in `1 … 2^53 − 1`; any other value is refused.
 
 ### 6.2 Result shape (part of OD-3, 2026-11-10)
 
@@ -198,9 +200,11 @@ Integers are bounded so that every consumer, a JavaScript frontend included, rea
 
 How a strategy declares the inputs it needs, and where strategy specifications live, are open (OD-13).
 
-### 6.5 Parameters (part of OD-13, 2026-11-10)
+### 6.5 Parameters (part of OD-13, 2026-11-10; amended 2026-11-12)
 
 Parameters are a **flat** immutable mapping from string keys to the scalar values of section 6.3 (string, integer, `Decimal`, boolean): no null, no sequence, no nested mapping. Scalars are accepted and rejected exactly as payload scalars are (Appendix A). Each strategy validates its own parameters; invalid parameters are an evaluation failure, not an exception. The engine never interprets them.
+
+Malformed parameters, that is, parameters outside the shape of this section, give an evaluation failure for that pair alone, produced by execution without calling the strategy; the other pairs of the execution are unaffected (section 6.7). Its code is open (OD-3).
 
 ### 6.6 One primary instrument per evaluation context (OD-21, 2026-11-10)
 
@@ -237,7 +241,7 @@ IDs not listed are closed and never reused: OD-1 (removed: it asked for one spec
 
 | ID | Open decision | Blocks |
 |---|---|---|
-| OD-3 | **Result model (remainder).** The taxonomy of machine-readable failure reasons; what evidence, if any, a result carries; who produces an evaluation failure for a data problem, given that validation happens before evaluating (DR-16) while a result is what a strategy returns (DR-14): the engine without calling the strategy, the strategy, or both; what the pairs of an instrument report when its snapshot cannot be built, and that this leaves the other instruments of the execution untouched (section 6.7). | Data-quality gate, any strategy |
+| OD-3 | **Result model (remainder).** The taxonomy of machine-readable failure reasons, including the code for malformed parameters (section 6.5); what evidence, if any, a result carries; who produces an evaluation failure for a data problem, given that validation happens before evaluating (DR-16) while a result is what a strategy returns (DR-14): the engine without calling the strategy, the strategy, or both; what the pairs of an instrument report when its snapshot cannot be built, and that this leaves the other instruments of the execution untouched (section 6.7). | Data-quality gate, any strategy, execution of a pair with malformed parameters |
 | OD-4 | **Universe (remainder).** *Decided: the instrument key is an opaque non-empty string, and pairs of strategy and instrument are given explicitly (sections 6.7, 6.8).* Still open: which venues, symbols and timeframes the engine evaluates, how it learns them (own configuration or Quasar's `GET /v1/instruments`), what an instrument key consists of and how it maps to a Quasar series. | Snapshot builder, scanning |
 | OD-5 | **Evaluation schedule and `as_of`.** How a live `as_of` is chosen (for example aligned to a candle boundary), and the step and range of a replay. One execution has one `as_of` for all its pairs (section 6.7), so strategies or instruments on different rhythms run in different executions; how those are scheduled, and what happens when an execution, which is sequential, is not finished before the next `as_of`, is open. | Live scanning, replay |
 | OD-6 | **Availability time.** Candle, open interest and funding rows carry no ingestion time (Quasar decision Q5) and the API does not know the Collector's publication delay (Quasar contract sections 6.1.4, 6.5.1, 6.7.1). DR-01, DR-03 and DR-06 need a decided derivation of "published" for each input (for example a delay applied by the engine, or a field added to the Quasar contract), and the engine's behavior when it cannot be established. | Snapshot builder, every input |

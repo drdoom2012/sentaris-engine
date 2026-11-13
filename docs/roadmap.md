@@ -1,6 +1,6 @@
 # Sentaris Engine — Implementation Roadmap
 
-**Status:** Approved (2026-11-11). Nothing is built.  
+**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b). Nothing is built.  
 **Source:** `docs/domain.md`. This roadmap cites rules and decisions by ID (`DR-xx`, `OD-xx`) and does not restate them. If the two disagree, the domain document wins.
 
 The roadmap splits the path from an empty repository to live scanning and historical replay into slices (`SE-n`). Each slice goes through the usual cycle: plan, independent review, implementation, independent review.
@@ -23,7 +23,7 @@ The roadmap splits the path from an empty repository to live scanning and histor
 | **SE-2** Payload values and canonical form | Accepted and rejected values, freezing by copy, duplicate-key rejection, canonical encoder, strict decoder, equality by canonical form. All test vectors of Appendix A.3. | Section 6.3, Appendix A, DR-10, DR-11, DR-13 | SE-1 | none |
 | **SE-3** Evaluation types | Time (instants and durations), parameters, signal, the three-outcome result, the snapshot container with the row types of the three inputs, evaluation context. Types only, no behavior beyond validation. The instrument key is handled only as the opaque non-empty string of section 6.8, so these types do not depend on its format. Checking a key against actual Quasar data belongs to SE-7b and OD-4. | Sections 5, 6.1, 6.2, 6.5, 6.6, 6.8; DR-14 | SE-2 | none |
 | **SE-4** Strategy contract and stateless evaluation | Strategy identity; the stateless contract and the evaluation of one stateless strategy as a pure transition, fully implemented; the stateful contract **as a type only**. Loading state, running a stateful transition and continuity belong to SE-14. Test strategies only; no real strategy. Determinism test: repeated evaluation gives identical output. | Section 6.4, DR-12, DR-22, DR-23, DR-26 | SE-3 | none |
-| **SE-5** Execution over pairs | One `as_of`, explicit pairs, one prebuilt snapshot per instrument, ordering, refused input, isolation of a strategy that raises, the report. Stateless pairs only; stateful pairs wait for SE-14. | Section 6.7, DR-10, DR-22 | SE-4 | none |
+| **SE-5** Execution over pairs | One `as_of`, explicit pairs, one prebuilt snapshot per instrument, ordering, refused input, isolation of a strategy that raises, the report. Stateless pairs only; stateful pairs wait for SE-14. Malformed parameters (domain section 6.5) are SE-5b's. | Section 6.7, DR-10, DR-22 | SE-4 | none |
 | **SE-6** Quasar REST client | Transport only: reading candles, open interest and funding through the REST API, paging, exact decimal parsing, error mapping. It takes Quasar's own series identifiers and makes no statement about availability, completeness or consistency. Tested against fixtures written from the Quasar contract. | Section 5, DR-11, DR-18 | SE-3 | none |
 
 SE-6 is independent of SE-4 and SE-5 and may run in parallel with them.
@@ -45,9 +45,10 @@ SE-8 and SE-9 are needed only once a strategy uses those inputs.
 
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
+| **SE-5b** Malformed parameters in execution | A pair whose parameters are refused gets an evaluation failure for that pair alone, without calling the strategy; the other pairs are unaffected. | Sections 6.5, 6.7; DR-14, DR-22 | SE-5 | OD-3 (the code for malformed parameters) |
 | **SE-10** Data-quality gate | Validation before evaluation, the failure-code taxonomy, who produces a failure, what the pairs of an instrument report when its snapshot cannot be built. | DR-14 to DR-17, section 6.7 | SE-5, SE-7b | OD-3 (remainder), OD-8 |
 | **SE-11** Indicators | Only if a strategy needs indicators: the decided source and numeric policy. | DR-11, DR-15 | SE-3; SE-6 if Quasar's indicators are the decided source | OD-9 |
-| **SE-12** First real strategy | One stateless strategy, specified on its own request, evaluated end to end over fixture data. | Domain section 3 ("Out of scope"), DR-12 | SE-10; SE-8, SE-9 and SE-11 only if the strategy uses them | The strategy's own specification; OD-13 (where specifications live) |
+| **SE-12** First real strategy | One stateless strategy, specified on its own request, evaluated end to end over fixture data. | Domain section 3 ("Out of scope"), DR-12 | SE-10, SE-5b; SE-8, SE-9 and SE-11 only if the strategy uses them | The strategy's own specification; OD-13 (where specifications live) |
 
 ### Phase D — Live scanning
 
@@ -93,7 +94,7 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 | 1 | OD-6, OD-7, OD-23 | SE-7b (OD-6, OD-7), SE-16 (OD-23) | The domain requires these to be decided together. They may need a change to the Quasar contract, so they have the longest lead time and should start first. |
 | 2 | OD-13 (remainder) | SE-7a | Independent of group 1; SE-7a can be built as soon as this is taken. |
 | 3 | OD-4 (remainder), OD-24 | SE-7b, SE-16 | |
-| 4 | OD-3 (remainder), OD-8 | SE-10 | |
+| 4 | OD-3 (remainder), OD-8 | SE-10, SE-5b | |
 | 5 | First strategy specification; OD-9 and OD-16 if it uses indicators or funding | SE-12, SE-11, SE-9 | The strategy's needs show which inputs and indicators matter. |
 | 6 | OD-5, OD-11; OD-18 and OD-25 if results leave memory | SE-13, SE-16 (OD-5) | |
 | 7 | OD-17, OD-19, OD-20 | SE-14, SE-15 | Only when a stateful strategy is requested. |
@@ -115,6 +116,8 @@ SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬───────
 
 SE-10 ─┬→ [strategy specification, OD-13] SE-12 → [OD-5, OD-11, OD-4] SE-13
        └→ [OD-5, OD-12, OD-23, OD-24] SE-16
+
+SE-5 → [OD-3] SE-5b → SE-12
 
 Optional inputs of SE-12, only if the strategy uses them: SE-8, SE-9, SE-11.
 ```

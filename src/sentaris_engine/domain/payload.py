@@ -19,7 +19,7 @@ class PayloadError(ValueError):
     """
 
 
-def _has_surrogate(text: str) -> bool:
+def has_surrogate(text: str) -> bool:
     return any("\ud800" <= ch <= "\udfff" for ch in text)
 
 
@@ -30,14 +30,14 @@ def is_payload_scalar(value: object) -> bool:
     if type(value) is int:
         return -MAX_INT <= value <= MAX_INT
     if type(value) is str:
-        return not _has_surrogate(value)
+        return not has_surrogate(value)
     if type(value) is Decimal:
         return value.is_finite()
     return False
 
 
 def _check_key(key: object) -> str:
-    if type(key) is not str or _has_surrogate(key):
+    if type(key) is not str or has_surrogate(key):
         raise PayloadError("mapping key is not a str without surrogate code points (A.1)")
     return key
 

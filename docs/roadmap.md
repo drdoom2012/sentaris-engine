@@ -33,7 +33,7 @@ SE-6 is independent of SE-4 and SE-5 and may run in parallel with them.
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
 | **SE-7a** Input declaration | How a strategy declares the inputs it needs, and how the needs of the pairs of one instrument are combined into what is read for that instrument (domain section 6.9). Narrowing each pair's snapshot to its own declaration needs the lookback boundaries and belongs to SE-7b. Pure domain code, no I/O. | Sections 6.4, 6.7, 6.9 | SE-4 | none (OD-13 part decided 2026-11-13, section 6.9) |
-| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-6 (remainder: the publication delay and the clock difference; the rest decided 2026-11-14, section 6.10), OD-4 (remainder: what a key consists of and how it maps to a Quasar series), OD-24 (the part about a snapshot read in several pages), OD-13 (remainder: which rows a lookback holds at its boundaries) |
+| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-4 (remainder: what a key consists of and how it maps to a Quasar series), OD-24 (the part about a snapshot read in several pages), OD-13 (remainder: which rows a lookback holds at its boundaries) |
 | **SE-8** Snapshot builder: open interest | Open interest availability and its relation to candles through the contract's instants. DR-07 test. | DR-03, DR-07, DR-20, DR-24 | SE-7b | none beyond SE-7b's |
 | **SE-9** Snapshot builder: funding | Funding selection and availability. DR-07 test. | DR-03, DR-04, DR-07, DR-24 | SE-7b | OD-16 |
 
@@ -58,7 +58,7 @@ SE-8 and SE-9 are needed only once a strategy uses those inputs.
 
 **Stateful live execution** is not part of SE-13. It requires SE-14 as well, and SE-15 with its gate if the decisions on persistence and commit (OD-11, OD-18, OD-20) require state to be recorded.
 
-Per the "Consequence for trust" in domain section 5, SE-13 is the first point at which a signal over real Quasar data may exist, and only once Quasar exposes the ingestion time (domain section 6.10) and SE-7b's gate has settled the remainder of OD-6.
+Per the "Consequence for trust" in domain section 5, SE-13 is the first point at which a signal over real Quasar data may exist, and only once Quasar serves the ingestion time (domain section 6.10).
 
 ### Phase E — Strategy state
 
@@ -79,7 +79,7 @@ SE-16 does not depend on SE-12: test strategies are enough to build and test the
 
 **Stateful replay** requires SE-14 as well, and the decision in OD-17 on how a replay's state is kept apart from live state (DR-27).
 
-**Trust requirements are unchanged.** SE-16 reads history only through the snapshot builder, so section 6.10 and the remainder of OD-6 (SE-7b's gate) apply to it in full, and OD-24 is in its own gate. Until both are decided, no replay output may be described as reproducing what a live evaluation would have produced (domain section 5, "Consequence for trust").
+**Trust requirements are unchanged.** SE-16 reads history only through the snapshot builder, so section 6.10 applies to it in full, and OD-24 is in its own gate. Until OD-24 is decided, no replay output may be described as reproducing what a live evaluation would have produced (domain section 5, "Consequence for trust").
 
 ### Not on the path
 
@@ -91,7 +91,7 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 
 | Order | Decisions | Unblocks | Note |
 |---|---|---|---|
-| 1 | OD-6 (remainder) | SE-7b | OD-6, OD-7 and OD-23 were decided together on 2026-11-14 (domain section 6.10); OD-7 and OD-23 are closed. The decision needs Quasar to expose the ingestion time per row, a change to the Quasar contract with the longest lead time. |
+| 1 | OD-6, OD-7, OD-23 (decided) | SE-7b | OD-6, OD-7 and OD-23 were decided on 2026-11-14 (domain section 6.10) and are closed. Quasar's contract defines the ingestion time per row (its section 4.1); until it is deployed, evaluations over real data fail closed. |
 | 2 | OD-13 (remainder) | SE-7a, SE-7b | The declaration and shared reading were decided 2026-11-13 (domain section 6.9), which unblocks SE-7a. The lookback boundaries remain for SE-7b; where strategy specifications live remains for the first real strategy. |
 | 3 | OD-4 (remainder), OD-24 | SE-7b, SE-16 | |
 | 4 | OD-3 (remainder), OD-8 | SE-10, SE-5b | |
@@ -109,7 +109,7 @@ SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬───────
                     │        │        └→ [OD-27, OD-17, OD-19, OD-20] SE-14                 │
                     │        │              └→ [OD-11, OD-18, OD-20] SE-15                  │
                     │        └→ SE-7a ─────────┐                                            │
-                    ├→ SE-6 ───────────────────┴→ [OD-6, OD-4, OD-24, OD-13] SE-7b ───────┬─┴→ [OD-3, OD-8] SE-10
+                    ├→ SE-6 ───────────────────┴→ [OD-4, OD-24, OD-13] SE-7b ───────────┬─┴→ [OD-3, OD-8] SE-10
                     │                                                                     ├→ SE-8
                     │                                                                     └→ [OD-16] SE-9
                     └→ [OD-9] SE-11

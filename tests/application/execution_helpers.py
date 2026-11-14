@@ -3,6 +3,7 @@
 from typing import Final
 
 from sentaris_engine.domain.context import EvaluationContext
+from sentaris_engine.domain.declaration import Declaration
 from sentaris_engine.domain.parameters import Parameters
 from sentaris_engine.domain.result import NoSignal, Result
 from sentaris_engine.domain.snapshot import Snapshot
@@ -46,6 +47,9 @@ class RecordingStrategy(StatelessStrategy):
         if self.raises:
             raise self.outcome  # type: ignore[misc]
         return self.outcome  # type: ignore[return-value]
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
 
 
 def params(k: int = 1) -> Parameters:

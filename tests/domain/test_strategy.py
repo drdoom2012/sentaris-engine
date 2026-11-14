@@ -6,6 +6,7 @@ import inspect
 
 import pytest
 
+from sentaris_engine.domain.declaration import Declaration
 from sentaris_engine.domain.errors import EvaluationTypeError
 from sentaris_engine.domain.evaluation import NotAnOutcome
 from sentaris_engine.domain.parameters import Parameters
@@ -21,7 +22,7 @@ from sentaris_engine.domain.strategy import (
     StrategyIdentity,
 )
 from tests.domain.evaluation_helpers import UNEXPECTED_IDS, UNEXPECTED_VALUES, raises_exactly
-from tests.domain.strategy_helpers import IDENTITY, MinimalStateful, MinimalStateless
+from tests.domain.strategy_helpers import EMPTY_DECLARATION, IDENTITY, MinimalStateful, MinimalStateless
 
 
 class _StrSub(str):
@@ -75,7 +76,7 @@ def test_contract_signatures_take_only_the_transition_inputs_contracts() -> None
         for parameter in signature.parameters.values():
             assert parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
             assert parameter.default is inspect.Parameter.empty
-    expected = frozenset({"identity", "evaluate"})
+    expected = frozenset({"identity", "evaluate", "declare"})
     assert StatelessStrategy.__abstractmethods__ == expected
     assert StatefulStrategy.__abstractmethods__ == expected
 
@@ -132,15 +133,27 @@ def test_contract_requires_evaluate_and_identity() -> None:
         def evaluate(self, context: object) -> NoSignal:
             return NoSignal()
 
+        def declare(self, parameters: Parameters) -> Declaration:
+            return EMPTY_DECLARATION
+
     class StatelessOnlyIdentity(StatelessStrategy):
         identity = IDENTITY
+
+        def declare(self, parameters: Parameters) -> Declaration:
+            return EMPTY_DECLARATION
 
     class StatefulOnlyEvaluate(StatefulStrategy):
         def evaluate(self, context: object, previous_state: object) -> StateTransition:
             return StateTransition(NoSignal(), previous_state)
 
+        def declare(self, parameters: Parameters) -> Declaration:
+            return EMPTY_DECLARATION
+
     class StatefulOnlyIdentity(StatefulStrategy):
         identity = IDENTITY
+
+        def declare(self, parameters: Parameters) -> Declaration:
+            return EMPTY_DECLARATION
 
     raises_exactly(TypeError, lambda: StatelessOnlyEvaluate())  # type: ignore[abstract]
     raises_exactly(TypeError, lambda: StatelessOnlyIdentity())  # type: ignore[abstract]
@@ -155,6 +168,9 @@ def test_contract_requires_evaluate_and_identity() -> None:
         def evaluate(self, context: object) -> NoSignal:
             return NoSignal()
 
+        def declare(self, parameters: Parameters) -> Declaration:
+            return EMPTY_DECLARATION
+
     StatelessWithProperty()
 
     class StatefulWithProperty(StatefulStrategy):
@@ -165,7 +181,36 @@ def test_contract_requires_evaluate_and_identity() -> None:
         def evaluate(self, context: object, previous_state: object) -> StateTransition:
             return StateTransition(NoSignal(), previous_state)
 
+        def declare(self, parameters: Parameters) -> Declaration:
+            return EMPTY_DECLARATION
+
     StatefulWithProperty()
+
+
+def test_declare_signature_takes_only_the_parameters() -> None:
+    for contract in (StatelessStrategy, StatefulStrategy):
+        signature = inspect.signature(contract.declare)
+        assert list(signature.parameters) == ["self", "parameters"]
+        for parameter in signature.parameters.values():
+            assert parameter.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+            assert parameter.default is inspect.Parameter.empty
+
+
+def test_strategy_without_declare_cannot_be_instantiated() -> None:
+    class StatelessOnlyEvaluateAndIdentity(StatelessStrategy):
+        identity = IDENTITY
+
+        def evaluate(self, context: object) -> NoSignal:
+            return NoSignal()
+
+    class StatefulOnlyEvaluateAndIdentity(StatefulStrategy):
+        identity = IDENTITY
+
+        def evaluate(self, context: object, previous_state: object) -> StateTransition:
+            return StateTransition(NoSignal(), previous_state)
+
+    raises_exactly(TypeError, lambda: StatelessOnlyEvaluateAndIdentity())  # type: ignore[abstract]
+    raises_exactly(TypeError, lambda: StatefulOnlyEvaluateAndIdentity())  # type: ignore[abstract]
 
 
 def test_no_state_marker() -> None:

@@ -7,8 +7,10 @@ from enum import Enum
 import pytest
 
 from sentaris_engine.domain.context import EvaluationContext
+from sentaris_engine.domain.declaration import Declaration
 from sentaris_engine.domain.errors import EvaluationTypeError
 from sentaris_engine.domain.evaluation import NotAnOutcome, evaluate_stateless
+from sentaris_engine.domain.parameters import Parameters
 from sentaris_engine.domain.payload import FrozenMapping
 from sentaris_engine.domain.result import EvaluationFailure, NoSignal, Result, Signals
 from sentaris_engine.domain.signal import Signal
@@ -16,6 +18,7 @@ from sentaris_engine.domain.strategy import NO_STATE, StatelessStrategy, StateTr
 from tests.domain.evaluation_helpers import raises_exactly
 from tests.domain.row_builders import snapshot
 from tests.domain.strategy_helpers import (
+    EMPTY_DECLARATION,
     IDENTITY,
     ContextSignalStrategy,
     MinimalStateful,
@@ -180,6 +183,9 @@ class _PositionalOnly(StatelessStrategy):
 
     def evaluate(self, ctx: EvaluationContext, /) -> Result:
         return self.outcome
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
 
 
 def test_evaluate_is_called_positionally() -> None:
@@ -353,6 +359,9 @@ class _UnreadableIdentity(StatelessStrategy):
 
     def evaluate(self, context: EvaluationContext) -> Result:
         return self.outcome
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
 
 
 def test_identity_is_not_read() -> None:

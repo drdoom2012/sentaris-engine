@@ -1,6 +1,6 @@
 # Sentaris Engine — Implementation Roadmap
 
-**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b) and 2026-11-13 (OD-27). Nothing is built.  
+**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b), 2026-11-13 (OD-27) and 2026-11-13 (OD-13, section 6.9). Nothing is built.  
 **Source:** `docs/domain.md`. This roadmap cites rules and decisions by ID (`DR-xx`, `OD-xx`) and does not restate them. If the two disagree, the domain document wins.
 
 The roadmap splits the path from an empty repository to live scanning and historical replay into slices (`SE-n`). Each slice goes through the usual cycle: plan, independent review, implementation, independent review.
@@ -32,8 +32,8 @@ SE-6 is independent of SE-4 and SE-5 and may run in parallel with them.
 
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
-| **SE-7a** Input declaration | How a strategy declares the inputs it needs, and how the needs of the strategies paired with one instrument are combined into what that instrument's snapshot must hold, as OD-13 decides. Pure domain code, no I/O. | Sections 6.4, 6.7 | SE-4 | OD-13 (remainder) |
-| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; building one immutable snapshot per instrument from the declared needs; candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-6, OD-7, OD-4 (remainder: what a key consists of and how it maps to a Quasar series), OD-24 (the part about a snapshot read in several pages) |
+| **SE-7a** Input declaration | How a strategy declares the inputs it needs, and how the needs of the pairs of one instrument are combined into what is read for that instrument (domain section 6.9). Narrowing each pair's snapshot to its own declaration needs the lookback boundaries and belongs to SE-7b. Pure domain code, no I/O. | Sections 6.4, 6.7, 6.9 | SE-4 | none (OD-13 part decided 2026-11-13, section 6.9) |
+| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-6, OD-7, OD-4 (remainder: what a key consists of and how it maps to a Quasar series), OD-24 (the part about a snapshot read in several pages), OD-13 (remainder: which rows a lookback holds at its boundaries) |
 | **SE-8** Snapshot builder: open interest | Open interest availability and its relation to candles through the contract's instants. DR-07 test. | DR-03, DR-07, DR-20, DR-24 | SE-7b | none beyond SE-7b's |
 | **SE-9** Snapshot builder: funding | Funding selection and availability. DR-07 test. | DR-03, DR-04, DR-07, DR-24 | SE-7b | OD-16 |
 
@@ -92,7 +92,7 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 | Order | Decisions | Unblocks | Note |
 |---|---|---|---|
 | 1 | OD-6, OD-7, OD-23 | SE-7b (OD-6, OD-7), SE-16 (OD-23) | The domain requires these to be decided together. They may need a change to the Quasar contract, so they have the longest lead time and should start first. |
-| 2 | OD-13 (remainder) | SE-7a | Independent of group 1; SE-7a can be built as soon as this is taken. |
+| 2 | OD-13 (remainder) | SE-7a, SE-7b | The declaration and shared reading were decided 2026-11-13 (domain section 6.9), which unblocks SE-7a. The lookback boundaries remain for SE-7b; where strategy specifications live remains for the first real strategy. |
 | 3 | OD-4 (remainder), OD-24 | SE-7b, SE-16 | |
 | 4 | OD-3 (remainder), OD-8 | SE-10, SE-5b | |
 | 5 | First strategy specification; OD-9 and OD-16 if it uses indicators or funding | SE-12, SE-11, SE-9 | The strategy's needs show which inputs and indicators matter. |
@@ -105,13 +105,13 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 Square brackets are the gate a slice waits for, in addition to the slices before it.
 
 ```text
-SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬──────────────────────────────────────────────┐
-                    │        │        └→ [OD-27, OD-17, OD-19, OD-20] SE-14          │
-                    │        │              └→ [OD-11, OD-18, OD-20] SE-15           │
-                    │        └→ [OD-13] SE-7a ─┐                                     │
-                    ├→ SE-6 ───────────────────┴→ [OD-6, OD-7, OD-4, OD-24] SE-7b ─┬─┴→ [OD-3, OD-8] SE-10
-                    │                                                              ├→ SE-8
-                    │                                                              └→ [OD-16] SE-9
+SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬─────────────────────────────────────────────────────┐
+                    │        │        └→ [OD-27, OD-17, OD-19, OD-20] SE-14                 │
+                    │        │              └→ [OD-11, OD-18, OD-20] SE-15                  │
+                    │        └→ SE-7a ─────────┐                                            │
+                    ├→ SE-6 ───────────────────┴→ [OD-6, OD-7, OD-4, OD-24, OD-13] SE-7b ─┬─┴→ [OD-3, OD-8] SE-10
+                    │                                                                     ├→ SE-8
+                    │                                                                     └→ [OD-16] SE-9
                     └→ [OD-9] SE-11
 
 SE-10 ─┬→ [strategy specification, OD-13] SE-12 → [OD-5, OD-11, OD-4] SE-13

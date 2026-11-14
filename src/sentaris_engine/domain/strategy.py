@@ -1,11 +1,13 @@
-"""Strategy identity, the two contracts, absent state and the stateful outcome (domain sections 6.4, 6.8; SE-4 spec 5.1 to 5.3, 5.5)."""
+"""Strategy identity, the two contracts, absent state and the stateful outcome (domain sections 6.4, 6.8, 6.9; SE-4 spec 5.1 to 5.3, 5.5; SE-7a spec 5.4)."""
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 from typing import ClassVar, Final, NoReturn, Self, final
 
 from sentaris_engine.domain.context import EvaluationContext
+from sentaris_engine.domain.declaration import Declaration
 from sentaris_engine.domain.errors import EvaluationTypeError
+from sentaris_engine.domain.parameters import Parameters
 from sentaris_engine.domain.result import EvaluationFailure, NoSignal, Result, Signals
 
 
@@ -64,6 +66,10 @@ class StatelessStrategy(metaclass=_ContractMeta, contract=True):
     @abstractmethod
     def evaluate(self, context: EvaluationContext) -> Result: ...
 
+    @abstractmethod
+    def declare(self, parameters: Parameters) -> Declaration | EvaluationFailure:
+        """The inputs this strategy needs for `parameters` alone, or a failure when it cannot form them (section 6.9, section 6.8)."""
+
 
 class StatefulStrategy(metaclass=_ContractMeta, contract=True):
     """A pure transition from the context and the previous state to a result and the next state (DR-26, DR-22, DR-12, section 6.8)."""
@@ -74,6 +80,10 @@ class StatefulStrategy(metaclass=_ContractMeta, contract=True):
 
     @abstractmethod
     def evaluate(self, context: EvaluationContext, previous_state: object) -> "StateTransition": ...
+
+    @abstractmethod
+    def declare(self, parameters: Parameters) -> Declaration | EvaluationFailure:
+        """The inputs this strategy needs for `parameters` alone, or a failure when it cannot form them (section 6.9, section 6.8)."""
 
 
 @final

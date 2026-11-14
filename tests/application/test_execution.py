@@ -20,8 +20,10 @@ from sentaris_engine.application.execution import (
     qualified_type_name,
 )
 from sentaris_engine.domain.context import EvaluationContext
+from sentaris_engine.domain.declaration import Declaration
 from sentaris_engine.domain.errors import EvaluationTypeError
 from sentaris_engine.domain.evaluation import NotAnOutcome
+from sentaris_engine.domain.parameters import Parameters
 from sentaris_engine.domain.payload import FrozenMapping
 from sentaris_engine.domain.result import EvaluationFailure, NoSignal, Result, Signals
 from sentaris_engine.domain.signal import Signal
@@ -155,6 +157,9 @@ class _WrongStateful(StatefulStrategy):
     def evaluate(self, context: EvaluationContext, previous_state: object) -> StateTransition:
         raise AssertionError("evaluated")
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
+
 
 class _Plain:
     def __init__(self) -> None:
@@ -188,7 +193,10 @@ def _both_instance() -> Any:
     def evaluate(self: Any, *args: object) -> NoReturn:
         raise AssertionError("evaluated")
 
-    namespace = {"__init__": init, "identity": property(identity), "evaluate": evaluate}
+    def declare(self: Any, parameters: Parameters) -> Declaration:
+        return Declaration(())
+
+    namespace = {"__init__": init, "identity": property(identity), "evaluate": evaluate, "declare": declare}
     both = ABCMeta.__new__(_ContractMeta, "Both", (StatelessStrategy, StatefulStrategy), namespace)
     return both()
 
@@ -248,6 +256,9 @@ class _IdentityReturns(StatelessStrategy):
         self.log.append((_identity("x"), context))
         return NoSignal()
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
+
 
 class _IdentityRaises(StatelessStrategy):
     def __init__(self, exc: BaseException, log: list[Call]) -> None:
@@ -261,6 +272,9 @@ class _IdentityRaises(StatelessStrategy):
     def evaluate(self, context: EvaluationContext) -> Result:
         self.log.append((_identity("x"), context))
         return NoSignal()
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
 
 
 class _MutatesIdentity(StatelessStrategy):
@@ -278,6 +292,9 @@ class _MutatesIdentity(StatelessStrategy):
         self.log.append((self.held, context))
         object.__setattr__(self.held, "id", "zzz")
         return NoSignal()
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
 
 
 class _ClaimsIdentity:
@@ -466,6 +483,9 @@ class _RaisesOnSnapshot(StatelessStrategy):
         if context.snapshot is self.target:
             self.action()
         return NoSignal()
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
 
 
 def _raise(exc: BaseException) -> Callable[[], NoReturn]:
@@ -712,6 +732,9 @@ class _ChangesSnapshots(StatelessStrategy):
         self.snapshots["C"] = snapshot(AS_OF)
         return NoSignal()
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
+
 
 class _ChangesPair(StatelessStrategy):
     """In `evaluate`, sets every field of `target` to another valid value with `object.__setattr__`."""
@@ -727,6 +750,9 @@ class _ChangesPair(StatelessStrategy):
         object.__setattr__(self.target, "parameters", params(99))
         object.__setattr__(self.target, "strategy", self.replacement)
         return NoSignal()
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return Declaration(())
 
 
 def test_snapshots_dict_changed_during_run_changes_nothing() -> None:

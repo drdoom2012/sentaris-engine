@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 
 from sentaris_engine.domain.context import EvaluationContext
+from sentaris_engine.domain.declaration import Declaration
 from sentaris_engine.domain.evaluation import evaluate_stateless
 from sentaris_engine.domain.parameters import Parameters
 from sentaris_engine.domain.payload import FrozenMapping
@@ -12,6 +13,7 @@ from sentaris_engine.domain.strategy import StatefulStrategy, StatelessStrategy,
 from tests.domain.row_builders import snapshot
 
 IDENTITY = StrategyIdentity("test", "1")
+EMPTY_DECLARATION = Declaration(())
 
 
 class MinimalStateless(StatelessStrategy):
@@ -20,12 +22,18 @@ class MinimalStateless(StatelessStrategy):
     def evaluate(self, context: EvaluationContext) -> Result:
         return NoSignal()
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
+
 
 class MinimalStateful(StatefulStrategy):
     identity = IDENTITY
 
     def evaluate(self, context: EvaluationContext, previous_state: object) -> StateTransition:
         return StateTransition(NoSignal(), previous_state)
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
 
 
 def make_context(as_of: int = 10_000_000) -> EvaluationContext:
@@ -46,6 +54,9 @@ class ReturningStrategy(StatelessStrategy):
         self.calls.append(context)
         return self.value  # type: ignore[return-value]
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
+
 
 class RaisingStrategy(StatelessStrategy):
     """Raises the given object outside any `except` block, so its `__context__` stays as set, and records each context."""
@@ -60,6 +71,9 @@ class RaisingStrategy(StatelessStrategy):
         self.calls.append(context)
         raise self.exc
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
+
 
 class ContextSignalStrategy(StatelessStrategy):
     """Deterministic: one signal built from the context's `as_of` and parameter `k`; records each context."""
@@ -73,6 +87,9 @@ class ContextSignalStrategy(StatelessStrategy):
         self.calls.append(context)
         return Signals((Signal("seen", FrozenMapping({"as_of": context.as_of, "k": context.parameters["k"]})),))
 
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
+
 
 class VaryingStrategy(StatelessStrategy):
     """Not deterministic: the payload holds a counter incremented on each call."""
@@ -85,6 +102,9 @@ class VaryingStrategy(StatelessStrategy):
     def evaluate(self, context: EvaluationContext) -> Result:
         self.count += 1
         return Signals((Signal("count", FrozenMapping({"n": self.count})),))
+
+    def declare(self, parameters: Parameters) -> Declaration:
+        return EMPTY_DECLARATION
 
 
 def check_deterministic(strategy: StatelessStrategy, contexts: Sequence[EvaluationContext], repeats: int = 3) -> None:

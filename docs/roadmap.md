@@ -1,6 +1,6 @@
 # Sentaris Engine — Implementation Roadmap
 
-**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b), 2026-11-13 (OD-27), 2026-11-13 (OD-13, section 6.9) and 2026-11-14 (OD-6, OD-7, OD-23, section 6.10; OD-4, section 6.8; OD-24, section 6.11). Nothing is built.  
+**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b), 2026-11-13 (OD-27), 2026-11-13 (OD-13, section 6.9) and 2026-11-14 (OD-6, OD-7, OD-23, section 6.10; OD-4, section 6.8; OD-24, section 6.11; OD-13, sections 6.4, 6.7, 6.9). Nothing is built.  
 **Source:** `docs/domain.md`. This roadmap cites rules and decisions by ID (`DR-xx`, `OD-xx`) and does not restate them. If the two disagree, the domain document wins.
 
 The roadmap splits the path from an empty repository to live scanning and historical replay into slices (`SE-n`). Each slice goes through the usual cycle: plan, independent review, implementation, independent review.
@@ -33,7 +33,7 @@ SE-6 is independent of SE-4 and SE-5 and may run in parallel with them.
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
 | **SE-7a** Input declaration | How a strategy declares the inputs it needs, and how the needs of the pairs of one instrument are combined into what is read for that instrument (domain section 6.9). Narrowing each pair's snapshot to its own declaration needs the lookback boundaries and belongs to SE-7b. Pure domain code, no I/O. | Sections 6.4, 6.7, 6.9 | SE-4 | none (OD-13 part decided 2026-11-13, section 6.9) |
-| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-13 (remainder: which rows a lookback holds at its boundaries) |
+| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | none (OD-4, OD-6, OD-7, OD-13 and OD-24 decided 2026-11-14, domain sections 6.4 to 6.11). Calling `declare` and reporting a declaration that raises (section 6.7) is part of this slice. |
 | **SE-8** Snapshot builder: open interest | Open interest availability and its relation to candles through the contract's instants. DR-07 test. | DR-03, DR-07, DR-20, DR-24 | SE-7b | none beyond SE-7b's |
 | **SE-9** Snapshot builder: funding | Funding selection and availability. DR-07 test. | DR-03, DR-04, DR-07, DR-24 | SE-7b | OD-16 |
 
@@ -48,7 +48,7 @@ SE-8 and SE-9 are needed only once a strategy uses those inputs.
 | **SE-5b** Malformed parameters in execution | A pair whose parameters are refused gets an evaluation failure for that pair alone, without calling the strategy; the other pairs are unaffected. | Sections 6.5, 6.7; DR-14, DR-22 | SE-5 | OD-3 (the code for malformed parameters) |
 | **SE-10** Data-quality gate | Validation before evaluation, the failure-code taxonomy, who produces a failure, what the pairs of an instrument report when its snapshot cannot be built. | DR-14 to DR-17, section 6.7 | SE-5, SE-7b | OD-3 (remainder), OD-8 |
 | **SE-11** Indicators | Only if a strategy needs indicators: the decided source and numeric policy. | DR-11, DR-15 | SE-3; SE-6 if Quasar's indicators are the decided source | OD-9 |
-| **SE-12** First real strategy | One stateless strategy, specified on its own request, evaluated end to end over fixture data. Every strategy specification states whether the strategy depends on earlier evaluations (phases, a path over time, signals already emitted) and, if it does, why that cannot be recomputed from a bounded window of data (OD-27); a strategy that needs state goes to OD-27 before it is planned. | Domain section 3 ("Out of scope"), DR-12 | SE-10, SE-5b; SE-8, SE-9 and SE-11 only if the strategy uses them | The strategy's own specification; OD-13 (where specifications live) |
+| **SE-12** First real strategy | One stateless strategy, specified on its own request, evaluated end to end over fixture data. Every strategy specification states whether the strategy depends on earlier evaluations (phases, a path over time, signals already emitted) and, if it does, why that cannot be recomputed from a bounded window of data (OD-27); a strategy that needs state goes to OD-27 before it is planned. | Domain section 3 ("Out of scope"), DR-12 | SE-10, SE-5b; SE-8, SE-9 and SE-11 only if the strategy uses them | The strategy's own specification (domain section 6.4) |
 
 ### Phase D — Live scanning
 
@@ -92,7 +92,7 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 | Order | Decisions | Unblocks | Note |
 |---|---|---|---|
 | 1 | OD-6, OD-7, OD-23 (decided) | SE-7b | OD-6, OD-7 and OD-23 were decided on 2026-11-14 (domain section 6.10) and are closed. Quasar's contract defines the ingestion time per row (its section 4.1); until it is deployed, evaluations over real data fail closed. |
-| 2 | OD-13 (remainder) | SE-7a, SE-7b | The declaration and shared reading were decided 2026-11-13 (domain section 6.9), which unblocks SE-7a. The lookback boundaries remain for SE-7b; where strategy specifications live remains for the first real strategy. |
+| 2 | OD-13 (decided) | SE-7a, SE-7b, SE-12 | The declaration and shared reading were decided 2026-11-13 (domain section 6.9); the lookback window, a declaration that raises and where strategy specifications live on 2026-11-14 (sections 6.4, 6.7, 6.9). OD-13 is closed. |
 | 3 | OD-4, OD-24 (decided) | SE-7b, SE-16 | OD-4 was decided on 2026-11-14 (domain section 6.8) and is closed. OD-24 was decided on 2026-11-14 (domain section 6.11) except whether a replay's dataset is kept, which matters only if that is requested. |
 | 4 | OD-3 (remainder), OD-8 | SE-10, SE-5b | |
 | 5 | First strategy specification; OD-9 and OD-16 if it uses indicators or funding | SE-12, SE-11, SE-9 | The strategy's needs show which inputs and indicators matter. |
@@ -109,12 +109,12 @@ SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬───────
                     │        │        └→ [OD-27, OD-17, OD-19, OD-20] SE-14                 │
                     │        │              └→ [OD-11, OD-18, OD-20] SE-15                  │
                     │        └→ SE-7a ─────────┐                                            │
-                    ├→ SE-6 ───────────────────┴→ [OD-13] SE-7b ──────────────────────────┬─┴→ [OD-3, OD-8] SE-10
+                    ├→ SE-6 ───────────────────┴→ SE-7b ──────────────────────────────────┬─┴→ [OD-3, OD-8] SE-10
                     │                                                                     ├→ SE-8
                     │                                                                     └→ [OD-16] SE-9
                     └→ [OD-9] SE-11
 
-SE-10 ─┬→ [strategy specification, OD-13] SE-12 → [OD-5, OD-11] SE-13
+SE-10 ─┬→ [strategy specification] SE-12 → [OD-5, OD-11] SE-13
        └→ [OD-5, OD-12] SE-16
 
 SE-5 → [OD-3] SE-5b → SE-12

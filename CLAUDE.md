@@ -68,7 +68,7 @@ These come from `docs/domain.md` (mainly sections 2, 7 and 8) and override conve
 - **Established rules (section 4) and decided design (section 6) are not changed without explicit approval.** The domain document describes behavior, not code: module names, signatures and test names stay out of it.
 - **A rule is "enforced" only with evidence**: an automated check runs and a named negative test fails on a violation. A slice is finished when `make check` passes and every rule it claims to enforce has such a test.
 - **Fail closed.** Missing, stale or inconsistent data is an evaluation failure with a machine-readable code, never "no signal", `None` or a swallowed exception. Data is never filled, interpolated or defaulted, and validation is never weakened to make a test pass (DR-14 to DR-17).
-- **Availability is never assumed** (DR-06). Availability rests on the ingestion time Quasar exposes (domain section 6.10). While Quasar does not serve it for an input, no evaluation over real Quasar data reading that input may produce a signal, and until OD-24 is decided no replay may be described as reproducing a live evaluation (domain section 5, "Consequence for trust").
+- **Availability is never assumed** (DR-06). Availability rests on the ingestion time Quasar exposes (domain section 6.10). While Quasar does not serve it for an input, no evaluation over real Quasar data reading that input may produce a signal, and a replay may be described as reproducing a live evaluation only with the accepted differences and the clock assumption of section 6.10 (domain section 5, "Consequence for trust").
 - **Every new data input gets a test with data stamped after `as_of` that must be ignored** (DR-07).
 
 ## Implementation constraints that are easy to get wrong

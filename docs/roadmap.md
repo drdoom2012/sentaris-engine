@@ -1,6 +1,6 @@
 # Sentaris Engine — Implementation Roadmap
 
-**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b), 2026-11-13 (OD-27), 2026-11-13 (OD-13, section 6.9) and 2026-11-14 (OD-6, OD-7, OD-23, section 6.10; OD-4, section 6.8). Nothing is built.  
+**Status:** Approved (2026-11-11); amended 2026-11-12 (SE-5b), 2026-11-13 (OD-27), 2026-11-13 (OD-13, section 6.9) and 2026-11-14 (OD-6, OD-7, OD-23, section 6.10; OD-4, section 6.8; OD-24, section 6.11). Nothing is built.  
 **Source:** `docs/domain.md`. This roadmap cites rules and decisions by ID (`DR-xx`, `OD-xx`) and does not restate them. If the two disagree, the domain document wins.
 
 The roadmap splits the path from an empty repository to live scanning and historical replay into slices (`SE-n`). Each slice goes through the usual cycle: plan, independent review, implementation, independent review.
@@ -33,7 +33,7 @@ SE-6 is independent of SE-4 and SE-5 and may run in parallel with them.
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
 | **SE-7a** Input declaration | How a strategy declares the inputs it needs, and how the needs of the pairs of one instrument are combined into what is read for that instrument (domain section 6.9). Narrowing each pair's snapshot to its own declaration needs the lookback boundaries and belongs to SE-7b. Pure domain code, no I/O. | Sections 6.4, 6.7, 6.9 | SE-4 | none (OD-13 part decided 2026-11-13, section 6.9) |
-| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-24 (the part about a snapshot read in several pages), OD-13 (remainder: which rows a lookback holds at its boundaries) |
+| **SE-7b** Snapshot builder: candles | Instrument key to Quasar series, including checking the key against actual Quasar data; reading through the client; reading each instrument's data once and building each pair's immutable snapshot narrowed to its own declaration (domain section 6.9); candle availability. DR-07 test for candles. | DR-01, DR-02, DR-05, DR-06, DR-07, DR-20 | SE-6, SE-7a | OD-13 (remainder: which rows a lookback holds at its boundaries) |
 | **SE-8** Snapshot builder: open interest | Open interest availability and its relation to candles through the contract's instants. DR-07 test. | DR-03, DR-07, DR-20, DR-24 | SE-7b | none beyond SE-7b's |
 | **SE-9** Snapshot builder: funding | Funding selection and availability. DR-07 test. | DR-03, DR-04, DR-07, DR-24 | SE-7b | OD-16 |
 
@@ -71,7 +71,7 @@ Per the "Consequence for trust" in domain section 5, SE-13 is the first point at
 
 | Slice | Content | Domain reference | Depends on | Gate |
 |---|---|---|---|---|
-| **SE-16** Replay runner | The generic runner: execution over a range of past `as_of` values on one consistent dataset, through the same pipeline as live (snapshot builder, data-quality gate, execution). Stateless strategies only. Tested with test strategies over fixtures of Quasar data; repeated-run identity test. | DR-12, DR-13, DR-21, section 3 ("Historical replay") | SE-10 | OD-5 (replay step and range), OD-12, OD-24 (remainder) |
+| **SE-16** Replay runner | The generic runner: execution over a range of past `as_of` values on one consistent dataset, through the same pipeline as live (snapshot builder, data-quality gate, execution). Stateless strategies only. Tested with test strategies over fixtures of Quasar data; repeated-run identity test. | DR-12, DR-13, DR-21, section 3 ("Historical replay") | SE-10 | OD-5 (replay step and range), OD-12; OD-24 (remainder) only if a kept dataset is requested |
 
 SE-16 does not depend on SE-12: test strategies are enough to build and test the runner.
 
@@ -79,7 +79,7 @@ SE-16 does not depend on SE-12: test strategies are enough to build and test the
 
 **Stateful replay** requires SE-14 as well, and the decision in OD-17 on how a replay's state is kept apart from live state (DR-27).
 
-**Trust requirements are unchanged.** SE-16 reads history only through the snapshot builder, so section 6.10 applies to it in full, and OD-24 is in its own gate. Until OD-24 is decided, no replay output may be described as reproducing what a live evaluation would have produced (domain section 5, "Consequence for trust").
+**Trust requirements are unchanged.** SE-16 reads history only through the snapshot builder, so sections 6.10 and 6.11 apply to it in full. A replay output may be described as reproducing what a live evaluation would have produced only with the accepted differences and the clock assumption of domain section 6.10 (domain section 5, "Consequence for trust").
 
 ### Not on the path
 
@@ -93,7 +93,7 @@ Decisions are listed in the order they start to block work. Phase A gives time t
 |---|---|---|---|
 | 1 | OD-6, OD-7, OD-23 (decided) | SE-7b | OD-6, OD-7 and OD-23 were decided on 2026-11-14 (domain section 6.10) and are closed. Quasar's contract defines the ingestion time per row (its section 4.1); until it is deployed, evaluations over real data fail closed. |
 | 2 | OD-13 (remainder) | SE-7a, SE-7b | The declaration and shared reading were decided 2026-11-13 (domain section 6.9), which unblocks SE-7a. The lookback boundaries remain for SE-7b; where strategy specifications live remains for the first real strategy. |
-| 3 | OD-24 | SE-7b, SE-16 | OD-4 was decided on 2026-11-14 (domain section 6.8) and is closed. |
+| 3 | OD-4, OD-24 (decided) | SE-7b, SE-16 | OD-4 was decided on 2026-11-14 (domain section 6.8) and is closed. OD-24 was decided on 2026-11-14 (domain section 6.11) except whether a replay's dataset is kept, which matters only if that is requested. |
 | 4 | OD-3 (remainder), OD-8 | SE-10, SE-5b | |
 | 5 | First strategy specification; OD-9 and OD-16 if it uses indicators or funding | SE-12, SE-11, SE-9 | The strategy's needs show which inputs and indicators matter. |
 | 6 | OD-5, OD-11; OD-18 and OD-25 if results leave memory | SE-13, SE-16 (OD-5) | |
@@ -109,13 +109,13 @@ SE-1 → SE-2 → SE-3 ─┬→ SE-4 ─┬→ SE-5 ─┬───────
                     │        │        └→ [OD-27, OD-17, OD-19, OD-20] SE-14                 │
                     │        │              └→ [OD-11, OD-18, OD-20] SE-15                  │
                     │        └→ SE-7a ─────────┐                                            │
-                    ├→ SE-6 ───────────────────┴→ [OD-24, OD-13] SE-7b ───────────────────┬─┴→ [OD-3, OD-8] SE-10
+                    ├→ SE-6 ───────────────────┴→ [OD-13] SE-7b ──────────────────────────┬─┴→ [OD-3, OD-8] SE-10
                     │                                                                     ├→ SE-8
                     │                                                                     └→ [OD-16] SE-9
                     └→ [OD-9] SE-11
 
 SE-10 ─┬→ [strategy specification, OD-13] SE-12 → [OD-5, OD-11] SE-13
-       └→ [OD-5, OD-12, OD-24] SE-16
+       └→ [OD-5, OD-12] SE-16
 
 SE-5 → [OD-3] SE-5b → SE-12
 
